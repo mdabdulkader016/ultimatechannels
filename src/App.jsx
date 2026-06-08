@@ -118,7 +118,10 @@ function pickFeatured(data) {
 export default function App() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [tab, setTab] = useState('home')
+  const [tab, setTab] = useState(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    return TABS.some((x) => x.id === t) ? t : 'home'
+  })
   const [selectedCountry, setSelectedCountry] = useState(null)
   const [search, setSearch] = useState('')
   const [quality, setQuality] = useState('all')
@@ -137,6 +140,28 @@ export default function App() {
   useEffect(() => {
     loadData().then(setData).catch((e) => setError(e.message))
   }, [])
+
+  // Keep the active tab in sync with the URL so each nav item is a real link
+  // (right-click → open in new tab) and browser back/forward work.
+  useEffect(() => {
+    const onPop = () => {
+      const t = new URLSearchParams(window.location.search).get('tab')
+      setTab(TABS.some((x) => x.id === t) ? t : 'home')
+      setSelectedCountry(null)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const hrefForTab = (id) => (id === 'home' ? '/' : `/?tab=${id}`)
+  const navTo = (id, e) => {
+    // Let modified clicks / middle-click open in a new tab via the href.
+    if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1)) return
+    if (e) e.preventDefault()
+    setTab(id); setSelectedCountry(null); setSearch(''); setCategory('all'); setQuality('all')
+    window.history.pushState({}, '', hrefForTab(id))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Reset paging whenever the active view changes.
   useEffect(() => setLimit(PAGE_SIZE), [tab, selectedCountry, search, quality, category])
@@ -369,26 +394,21 @@ export default function App() {
           <a
             className="logo"
             href="/"
-            onClick={(e) => {
-              // Let modified clicks / middle-click open the homepage in a new tab.
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
-              e.preventDefault()
-              setTab('home'); setSelectedCountry(null); setSearch(''); setCategory('all'); setQuality('all')
-              window.scrollTo({ top: 0, behavior: 'smooth' })
-            }}
+            onClick={(e) => navTo('home', e)}
             aria-label="Ultimate Channels — Home"
           >
             <img src="/Ulimate-Channels-Logo.png" alt="Ultimate Channels" />
           </a>
           <nav className="nav-links">
             {TABS.map((t) => (
-              <button
+              <a
                 key={t.id}
+                href={hrefForTab(t.id)}
                 className={`nav-link ${tab === t.id ? 'active' : ''}`}
-                onClick={() => { setTab(t.id); setSelectedCountry(null); setSearch(''); setCategory('all') }}
+                onClick={(e) => navTo(t.id, e)}
               >
                 {t.label}
-              </button>
+              </a>
             ))}
           </nav>
         </div>

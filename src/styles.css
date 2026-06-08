@@ -104,14 +104,16 @@ a:hover { text-decoration: underline; }
 
 .nav-links { display: flex; align-items: center; gap: 4px; }
 .nav-link {
+  display: inline-flex; align-items: center;
   padding: 7px 12px;
   border: none; background: transparent;
   color: var(--label-2);
   font-size: 14px; font-weight: 500;
   cursor: pointer; border-radius: var(--r-sm);
+  text-decoration: none;
   transition: color 0.15s, background 0.15s;
 }
-.nav-link:hover { color: var(--label); }
+.nav-link:hover { color: var(--label); text-decoration: none; }
 .nav-link.active { color: var(--label); font-weight: 600; }
 
 .nav-right { display: flex; align-items: center; gap: 14px; }
