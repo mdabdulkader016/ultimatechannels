@@ -368,7 +368,10 @@ export default function App() {
         <div className="nav-left">
           <button
             className="logo"
-            onClick={() => { setTab('home'); setSelectedCountry(null); setSearch(''); setCategory('all') }}
+            onClick={() => {
+              setTab('home'); setSelectedCountry(null); setSearch(''); setCategory('all'); setQuality('all')
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
             aria-label="Ultimate Channels — Home"
           >
             <img src="/Ulimate-Channels-Logo.png" alt="Ultimate Channels" />
