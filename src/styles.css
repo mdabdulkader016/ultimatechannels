@@ -95,9 +95,10 @@ a:hover { text-decoration: underline; }
 .logo {
   display: inline-flex; align-items: center;
   padding: 0; border: none; background: transparent;
-  cursor: pointer;
+  cursor: pointer; text-decoration: none;
   transition: transform 0.15s;
 }
+.logo:hover { text-decoration: none; }
 .logo:hover { transform: scale(1.04); }
 .logo img { height: 64px; width: auto; display: block; }
 

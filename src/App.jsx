@@ -366,16 +366,20 @@ export default function App() {
     <div className="app">
       <header className="navbar">
         <div className="nav-left">
-          <button
+          <a
             className="logo"
-            onClick={() => {
+            href="/"
+            onClick={(e) => {
+              // Let modified clicks / middle-click open the homepage in a new tab.
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+              e.preventDefault()
               setTab('home'); setSelectedCountry(null); setSearch(''); setCategory('all'); setQuality('all')
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
             aria-label="Ultimate Channels — Home"
           >
             <img src="/Ulimate-Channels-Logo.png" alt="Ultimate Channels" />
-          </button>
+          </a>
           <nav className="nav-links">
             {TABS.map((t) => (
               <button
