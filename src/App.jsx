@@ -37,6 +37,15 @@ function CrownIcon() {
   )
 }
 
+function MenuIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  )
+}
+
 // Country codes hidden from non-VIP users (and from search).
 const RESTRICTED_COUNTRIES = new Set(['BD'])
 
@@ -137,6 +146,9 @@ export default function App() {
   const [vipError, setVipError] = useState(false)
   const vipRef = useRef(null)
 
+  const [menuOpen, setMenuOpen] = useState(false) // mobile 3-dot menu
+  const menuRef = useRef(null)
+
   useEffect(() => {
     loadData().then(setData).catch((e) => setError(e.message))
   }, [])
@@ -185,6 +197,16 @@ export default function App() {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [vipOpen])
+
+  // Close the mobile 3-dot menu on an outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [menuOpen])
 
   const submitVip = async (e) => {
     e.preventDefault()
@@ -387,6 +409,51 @@ export default function App() {
   // country grid (where only country cards are shown).
   const showQualityFilter = !(tab === 'countries' && !selectedCountry)
 
+  // Shared filter/VIP controls, reused by the desktop dropdowns and the mobile
+  // 3-dot menu so behaviour stays identical across breakpoints.
+  const qualityGroup = (
+    <div className="filter-group">
+      <span className="filter-label">Quality</span>
+      <div className="seg">
+        {QUALITY_FILTERS.map((f) => (
+          <button key={f.id} className={`seg-item ${quality === f.id ? 'active' : ''}`} onClick={() => setQuality(f.id)}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+  const categoryGroup = (
+    <div className="filter-group">
+      <span className="filter-label">Category</span>
+      <div className="chip-wrap">
+        <button className={`chip ${category === 'all' ? 'active' : ''}`} onClick={() => setCategory('all')}>All</button>
+        {CATEGORY_FILTERS.map((c) => (
+          <button key={c.id} className={`chip ${category === c.id ? 'active' : ''}`} onClick={() => setCategory(c.id)}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+  const vipBody = vip ? (
+    <>
+      <span className="vip-status"><CrownIcon /> VIP active</span>
+      <button className="btn ghost" onClick={signOutVip}>Sign out</button>
+    </>
+  ) : (
+    <form className="vip-form" onSubmit={submitVip}>
+      <input
+        className={`vip-input ${vipError ? 'err' : ''}`}
+        type="text"
+        placeholder="Enter VIP code"
+        value={vipInput}
+        onChange={(e) => { setVipInput(e.target.value); setVipError(false) }}
+      />
+      <button className="btn vip-submit" type="submit">Unlock</button>
+    </form>
+  )
+
   return (
     <div className="app">
       <header className="navbar">
@@ -415,7 +482,7 @@ export default function App() {
 
         <div className="nav-right">
           {showQualityFilter && (
-            <div className="filter" ref={filterRef}>
+            <div className="filter only-desktop" ref={filterRef}>
               <button
                 className={`filter-btn ${(quality !== 'all' || category !== 'all') ? 'on' : ''}`}
                 onClick={() => setFilterOpen((o) => !o)}
@@ -428,41 +495,13 @@ export default function App() {
               </button>
               {filterOpen && (
                 <div className="filter-panel">
-                  <div className="filter-group">
-                    <span className="filter-label">Quality</span>
-                    <div className="seg">
-                      {QUALITY_FILTERS.map((f) => (
-                        <button
-                          key={f.id}
-                          className={`seg-item ${quality === f.id ? 'active' : ''}`}
-                          onClick={() => setQuality(f.id)}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="filter-group">
-                    <span className="filter-label">Category</span>
-                    <div className="chip-wrap">
-                      <button className={`chip ${category === 'all' ? 'active' : ''}`} onClick={() => setCategory('all')}>
-                        All
-                      </button>
-                      {CATEGORY_FILTERS.map((c) => (
-                        <button
-                          key={c.id}
-                          className={`chip ${category === c.id ? 'active' : ''}`}
-                          onClick={() => setCategory(c.id)}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {qualityGroup}
+                  {categoryGroup}
                 </div>
               )}
             </div>
           )}
+
           <label className="search-wrap">
             <SearchIcon />
             <input
@@ -474,7 +513,7 @@ export default function App() {
             />
           </label>
 
-          <div className="vip" ref={vipRef}>
+          <div className="vip only-desktop" ref={vipRef}>
             <button
               className={`vip-btn ${vip ? 'active' : ''}`}
               onClick={() => { setVipOpen((o) => !o); setVipError(false) }}
@@ -483,26 +522,27 @@ export default function App() {
             >
               <CrownIcon />
             </button>
-            {vipOpen && (
-              <div className="vip-panel">
-                {vip ? (
-                  <>
-                    <span className="vip-status"><CrownIcon /> VIP active</span>
-                    <button className="btn ghost" onClick={signOutVip}>Sign out</button>
-                  </>
-                ) : (
-                  <form className="vip-form" onSubmit={submitVip}>
-                    <input
-                      className={`vip-input ${vipError ? 'err' : ''}`}
-                      type="text"
-                      placeholder="Enter VIP code"
-                      value={vipInput}
-                      onChange={(e) => { setVipInput(e.target.value); setVipError(false) }}
-                      autoFocus
-                    />
-                    <button className="btn vip-submit" type="submit">Unlock</button>
-                  </form>
-                )}
+            {vipOpen && <div className="vip-panel">{vipBody}</div>}
+          </div>
+
+          {/* Mobile: one 3-dot menu holding the filter + VIP controls. */}
+          <div className="navmenu only-mobile" ref={menuRef}>
+            <button
+              className={`navmenu-btn ${(quality !== 'all' || category !== 'all' || vip) ? 'on' : ''}`}
+              onClick={() => { setMenuOpen((o) => !o); setVipError(false) }}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+            >
+              <MenuIcon />
+            </button>
+            {menuOpen && (
+              <div className="navmenu-panel">
+                {showQualityFilter && qualityGroup}
+                {showQualityFilter && categoryGroup}
+                <div className="filter-group">
+                  <span className="filter-label vip-label"><CrownIcon /> VIP</span>
+                  {vipBody}
+                </div>
               </div>
             )}
           </div>
