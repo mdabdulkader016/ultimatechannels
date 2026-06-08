@@ -6,6 +6,7 @@
 import { loadFreeTV } from './freetv.js'
 import { parseIptvList, IPTVLIST_URL } from './iptvlist.js'
 import { loadSky } from './sky.js'
+import { loadUltimate } from './ultimate.js'
 
 const BASE = 'https://iptv-org.github.io/api'
 
@@ -82,7 +83,7 @@ function qualityLabel(height) {
  * with at least one playable stream are included.
  */
 export async function loadData() {
-  const [channels, streams, countries, categories, logos, freetv, iptvListText, sky] =
+  const [channels, streams, countries, categories, logos, freetv, iptvListText, sky, ultimate] =
     await Promise.all([
       getJSON(ENDPOINTS.channels),
       getJSON(ENDPOINTS.streams),
@@ -92,6 +93,7 @@ export async function loadData() {
       loadFreeTV(), // bonus source; resolves to [] if unreachable
       fetchText(IPTVLIST_URL), // parsed below (needs country names first)
       loadSky(), // bundled pack; resolves to [] if missing
+      loadUltimate(), // bundled "Ultimate" pack; resolves to [] if missing
     ])
 
   // Index iptv-org streams by the channel id they belong to.
@@ -193,6 +195,7 @@ export async function loadData() {
   mergeSource(freetv, 'Free-TV')
   mergeSource(iptvlist, 'iptvlist')
   mergeSource(sky, 'Sky')
+  mergeSource(ultimate, 'Ultimate')
 
   // 3) Finalize each channel and build the groupings.
   const channelsByCountry = {}

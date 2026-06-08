@@ -275,9 +275,26 @@ export default function App() {
   if (!data) {
     return (
       <div className="state">
-        <div className="spinner" />
-        <h1>Loading channels…</h1>
-        <p className="muted">Fetching the latest IPTV directory. This can take a few seconds.</p>
+        <div className="ball-bounce" aria-hidden="true">
+          <svg className="ball" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="46" fill="#fff" stroke="#e50914" strokeWidth="4" />
+            <polygon points="50,29 65,40 59,58 41,58 35,40" fill="#e50914" />
+            <g stroke="#e50914" strokeWidth="4" strokeLinecap="round">
+              <line x1="50" y1="29" x2="50" y2="8" />
+              <line x1="65" y1="40" x2="84" y2="33" />
+              <line x1="59" y1="58" x2="73" y2="74" />
+              <line x1="41" y1="58" x2="27" y2="74" />
+              <line x1="35" y1="40" x2="16" y2="33" />
+            </g>
+            <g fill="#e50914">
+              <path d="M50 8a42 42 0 0 1 14 4l-14 8-14-8a42 42 0 0 1 14-4z" />
+              <path d="M88 38a42 42 0 0 1 2 22l-16-6 2-18z" />
+              <path d="M12 38l12 -2 2 18l-16 6a42 42 0 0 1 2 -22z" />
+              <path d="M30 88a42 42 0 0 0 40 0l-7-15H37z" />
+            </g>
+          </svg>
+        </div>
+        <h1>Hold Tight.....</h1>
       </div>
     )
   }
@@ -553,7 +570,7 @@ export default function App() {
 
       <footer className="footer">
         <span className="muted">
-          Publicly listed free-to-air streams; availability varies by region.
+          {(vip ? data.totalChannels : data.totalChannels - (data.channelsByCountry['BD']?.length || 0)).toLocaleString()} TV channels
         </span>
       </footer>
 
