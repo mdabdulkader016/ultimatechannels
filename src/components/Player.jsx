@@ -116,6 +116,12 @@ export default function Player({ channel, onClose }) {
     if (Hls.isSupported()) {
       const hls = new Hls({
         maxBufferLength: 30,
+        // Faster, sharper start: assume a healthy connection and skip the
+        // bandwidth "probe" so ABR begins on a good rendition instead of
+        // ramping up from the lowest (blurry) one.
+        abrEwmaDefaultEstimate: 3_000_000, // assume ~3 Mbps available
+        testBandwidth: false,
+        startFragPrefetch: true,
         manifestLoadingTimeOut: 20000,
         manifestLoadingMaxRetry: 3,
         manifestLoadingRetryDelay: 800,
