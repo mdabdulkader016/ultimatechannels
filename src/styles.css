@@ -830,13 +830,17 @@ img.title-flag {
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
   .navbar { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 10px; }
-  .nav-left { gap: 18px; width: 100%; justify-content: flex-start; }
+  /* Row 1: logo + nav links + hamburger (pushed to the right). */
+  .nav-left { gap: 14px; width: 100%; justify-content: flex-start; }
   .nav-links { gap: 10px; justify-content: flex-start; }
   .nav-link { padding: 6px 4px; font-size: 13px; }
+  .navmenu { margin-left: auto; }
   .only-desktop { display: none !important; }
   .only-mobile { display: block; }
-  .nav-right { width: 100%; justify-content: center; gap: 10px; }
-  .search-wrap { width: auto; flex: 1; }
+  /* Row 2: Download APK + Search. */
+  .nav-right { width: 100%; justify-content: flex-start; gap: 10px; }
+  .btn-apk { flex: none; padding: 9px 13px; }
+  .search-wrap { width: auto; flex: 1 1 auto; min-width: 0; }
   .search-wrap:focus-within { width: auto; }
   .seg-item { padding: 5px 9px; }
   .hero { min-height: 52vh; padding-bottom: 64px; }

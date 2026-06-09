@@ -532,6 +532,28 @@ export default function App() {
               </a>
             ))}
           </nav>
+
+          {/* Mobile: hamburger menu sits in row 1, right after the nav links. */}
+          <div className="navmenu only-mobile" ref={menuRef}>
+            <button
+              className={`navmenu-btn ${(quality !== 'all' || category !== 'all' || vip) ? 'on' : ''}`}
+              onClick={() => { setMenuOpen((o) => !o); setVipError(false) }}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+            >
+              <MenuIcon />
+            </button>
+            {menuOpen && (
+              <div className="navmenu-panel">
+                {showQualityFilter && qualityGroup}
+                {showQualityFilter && categoryGroup}
+                <div className="filter-group">
+                  <span className="filter-label vip-label"><CrownIcon /> VIP</span>
+                  {vipBody}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="nav-right">
@@ -586,28 +608,6 @@ export default function App() {
               <CrownIcon />
             </button>
             {vipOpen && <div className="vip-panel">{vipBody}</div>}
-          </div>
-
-          {/* Mobile: one 3-dot menu holding the filter + VIP controls. */}
-          <div className="navmenu only-mobile" ref={menuRef}>
-            <button
-              className={`navmenu-btn ${(quality !== 'all' || category !== 'all' || vip) ? 'on' : ''}`}
-              onClick={() => { setMenuOpen((o) => !o); setVipError(false) }}
-              aria-label="Menu"
-              aria-expanded={menuOpen}
-            >
-              <MenuIcon />
-            </button>
-            {menuOpen && (
-              <div className="navmenu-panel">
-                {showQualityFilter && qualityGroup}
-                {showQualityFilter && categoryGroup}
-                <div className="filter-group">
-                  <span className="filter-label vip-label"><CrownIcon /> VIP</span>
-                  {vipBody}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </header>
