@@ -6,7 +6,7 @@
 //   1. A static code (VIP_CODES env var, comma-separated, or the CODES list), or
 //   2. An active code generated from the admin dashboard (stored in Upstash).
 // Matching is case-insensitive and trims surrounding whitespace.
-import { getCode, incr, recordIp } from './store.js'
+import { getCode, getNum, incr, recordIp } from './store.js'
 
 // Best-effort client IP (Vercel sets x-forwarded-for; fall back to socket).
 function clientIp(req) {
@@ -43,8 +43,18 @@ export async function vipHandler(req, res) {
   const code = (url.searchParams.get('code') || '').trim()
   const silent = url.searchParams.get('silent') === '1'
 
-  const ok = await isValidCode(code)
+  let ok = await isValidCode(code)
   const c = code.toLowerCase()
+  const isStatic = STATIC.has(c)
+
+  // Enforce a per-code usage cap on NEW entries only. The silent launch re-check
+  // ignores the cap, so users who already unlocked keep their access.
+  if (!silent && ok && !isStatic) {
+    const meta = await getCode(c)
+    const max = (meta && meta.maxUses) || 0
+    if (max > 0 && (await getNum(`vip:rc:${c}`)) >= max) ok = false
+  }
+
   // IMPORTANT: await all writes — on serverless the function is frozen right
   // after the response is sent, so un-awaited writes to Upstash get dropped.
   if (!silent) {

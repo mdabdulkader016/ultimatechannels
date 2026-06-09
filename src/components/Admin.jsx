@@ -23,6 +23,7 @@ export default function Admin() {
   const [storeReady, setStoreReady] = useState(true)
   const [label, setLabel] = useState('')
   const [count, setCount] = useState(1)
+  const [maxUses, setMaxUses] = useState('')
   const [custom, setCustom] = useState('')
   const [justCreated, setJustCreated] = useState([])
   const [err, setErr] = useState('')
@@ -64,7 +65,7 @@ export default function Admin() {
   const generate = async (e) => {
     e.preventDefault()
     setBusy(true); setErr(''); setJustCreated([])
-    const { status, json } = await api('generate', { token, label, count })
+    const { status, json } = await api('generate', { token, label, count, maxUses })
     setBusy(false)
     if (status === 401) return logout()
     if (!json.ok) return setErr(json.error || 'Failed to generate')
@@ -78,7 +79,7 @@ export default function Admin() {
     const code = custom.trim()
     if (!code) return
     setBusy(true); setErr(''); setJustCreated([])
-    const { status, json } = await api('custom', { token, code, label })
+    const { status, json } = await api('custom', { token, code, label, maxUses })
     setBusy(false)
     if (status === 401) return logout()
     if (!json.ok) return setErr(json.error || 'Failed to create code')
@@ -156,7 +157,12 @@ export default function Admin() {
         <h2>Create VIP codes</h2>
         <input
           className="admin-input" placeholder="Label (optional, e.g. 'June promo') — applies to whichever you create below"
-          value={label} onChange={(e) => setLabel(e.target.value)} style={{ width: '100%', marginBottom: '14px' }}
+          value={label} onChange={(e) => setLabel(e.target.value)} style={{ width: '100%', marginBottom: '10px' }}
+        />
+        <input
+          className="admin-input" type="number" min="0"
+          placeholder="Max uses (blank or 0 = unlimited) — how many times the code can be entered"
+          value={maxUses} onChange={(e) => setMaxUses(e.target.value)} style={{ width: '100%', marginBottom: '14px' }}
         />
 
         <div className="admin-subhead">Your own code</div>
@@ -193,10 +199,12 @@ export default function Admin() {
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>Code</th><th>Label</th><th>Created</th><th>Redeemed</th><th>IPs</th><th>Status</th><th></th></tr>
+              <tr><th>Code</th><th>Label</th><th>Created</th><th>Used</th><th>Max</th><th>IPs</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-              {codes.map((c) => (
+              {codes.map((c) => {
+                const exhausted = c.maxUses > 0 && (c.redeemed || 0) >= c.maxUses
+                return (
                 <Fragment key={c.code}>
                   <tr className={c.active ? '' : 'revoked'}>
                     <td>
@@ -207,12 +215,13 @@ export default function Admin() {
                     <td>{c.label || '—'}</td>
                     <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</td>
                     <td>{c.redeemed || 0}</td>
+                    <td>{c.maxUses > 0 ? c.maxUses : '∞'}</td>
                     <td>
                       {c.ips > 0
                         ? <button className="link-btn" onClick={() => viewIps(c.code)}>{c.ips} {c.ips === 1 ? 'IP' : 'IPs'} {ipsFor === c.code ? '▴' : '▾'}</button>
                         : <span className="muted">0</span>}
                     </td>
-                    <td>{c.active ? <span className="tag-on">Active</span> : <span className="tag-off">Revoked</span>}</td>
+                    <td>{!c.active ? <span className="tag-off">Revoked</span> : exhausted ? <span className="tag-off">Used up</span> : <span className="tag-on">Active</span>}</td>
                     <td className="admin-row-actions">
                       {c.active
                         ? <button className="link-btn warn" onClick={() => setActive(c.code, false)}>Revoke</button>
@@ -222,7 +231,7 @@ export default function Admin() {
                   </tr>
                   {ipsFor === c.code && (
                     <tr className="admin-ips-row">
-                      <td colSpan="7">
+                      <td colSpan="8">
                         <div className="admin-ips">
                           {(ipsData[c.code] || []).length === 0
                             ? <span className="muted">No IPs recorded yet.</span>
@@ -238,9 +247,10 @@ export default function Admin() {
                     </tr>
                   )}
                 </Fragment>
-              ))}
+                )
+              })}
               {codes.length === 0 && (
-                <tr><td colSpan="7" className="muted" style={{ padding: '18px', textAlign: 'center' }}>No codes yet — create some above.</td></tr>
+                <tr><td colSpan="8" className="muted" style={{ padding: '18px', textAlign: 'center' }}>No codes yet — create some above.</td></tr>
               )}
             </tbody>
           </table>

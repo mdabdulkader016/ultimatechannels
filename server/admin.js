@@ -104,12 +104,13 @@ export async function adminHandler(req, res) {
     if (!storeReady()) return send(res, 500, { error: 'Storage not configured (set Upstash env vars)' })
     const count = Math.min(Math.max(parseInt(body.count, 10) || 1, 1), 100)
     const label = (body.label || '').toString().slice(0, 80)
+    const maxUses = Math.max(parseInt(body.maxUses, 10) || 0, 0) // 0 = unlimited
     const created = []
     for (let i = 0; i < count; i++) {
       let code = genCode()
       // avoid the rare collision
       if (await getCode(code)) code = genCode()
-      await addCode(code, { label, createdAt: Date.now(), active: true, code })
+      await addCode(code, { label, createdAt: Date.now(), active: true, code, maxUses })
       created.push(code)
     }
     return send(res, 200, { ok: true, created })
@@ -124,7 +125,8 @@ export async function adminHandler(req, res) {
     }
     if (await getCode(code)) return send(res, 409, { error: 'That code already exists' })
     const label = (body.label || '').toString().slice(0, 80)
-    await addCode(code, { label, createdAt: Date.now(), active: true, code })
+    const maxUses = Math.max(parseInt(body.maxUses, 10) || 0, 0) // 0 = unlimited
+    await addCode(code, { label, createdAt: Date.now(), active: true, code, maxUses })
     return send(res, 200, { ok: true, created: [code] })
   }
 
