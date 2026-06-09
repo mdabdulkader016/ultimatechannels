@@ -4,6 +4,7 @@ import ChannelGrid from './components/ChannelGrid.jsx'
 import Row from './components/Row.jsx'
 import Player from './components/Player.jsx'
 import { initTvNavigation } from './tvnav.js'
+import { App as CapApp } from '@capacitor/app'
 
 const TABS = [
   { id: 'home', label: 'Home' },
@@ -142,6 +143,7 @@ export default function App() {
   const [category, setCategory] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
   const [playing, setPlaying] = useState(null)
+  const [confirmExit, setConfirmExit] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const filterRef = useRef(null)
 
@@ -153,19 +155,44 @@ export default function App() {
 
   const [menuOpen, setMenuOpen] = useState(false) // mobile 3-dot menu
   const menuRef = useRef(null)
-  const playingRef = useRef(false)
-  useEffect(() => { playingRef.current = !!playing }, [playing])
 
-  // Open the player and push a history entry, so the TV remote's hardware Back
-  // (and browser Back) closes the player instead of exiting the whole app.
+  // Refs mirror state so the (once-registered) native Back listener isn't stale.
+  const playingRef = useRef(false)
+  const tabRef = useRef(tab)
+  const selCountryRef = useRef(null)
+  const confirmRef = useRef(false)
+  useEffect(() => { playingRef.current = !!playing }, [playing])
+  useEffect(() => { tabRef.current = tab }, [tab])
+  useEffect(() => { selCountryRef.current = selectedCountry }, [selectedCountry])
+  useEffect(() => { confirmRef.current = confirmExit }, [confirmExit])
+
+  // On the web only, push a history entry so browser Back closes the player.
+  // In the APK the native Back button is handled by the listener below.
   const openPlayer = (ch) => {
-    if (!playingRef.current) window.history.pushState({ player: true }, '')
+    if (!IS_APP && !playingRef.current) window.history.pushState({ player: true }, '')
     setPlaying(ch)
   }
   const closePlayer = () => {
-    if (window.history.state && window.history.state.player) window.history.back()
+    if (!IS_APP && window.history.state && window.history.state.player) window.history.back()
     else setPlaying(null)
   }
+
+  // Android (TV/phone) hardware Back: step back toward Home, then confirm exit.
+  useEffect(() => {
+    let handle
+    CapApp.addListener('backButton', () => {
+      if (confirmRef.current) { setConfirmExit(false); return }       // dismiss exit prompt
+      if (playingRef.current) { setPlaying(null); return }            // close player
+      if (selCountryRef.current) { setSelectedCountry(null); return } // leave country detail
+      if (tabRef.current !== 'home') {                                // any tab → Home
+        setTab('home'); setSelectedCountry(null)
+        window.history.replaceState({}, '', '/')
+        return
+      }
+      setConfirmExit(true)                                            // on Home → ask to exit
+    }).then((h) => { handle = h })
+    return () => { if (handle) handle.remove() }
+  }, [])
 
   useEffect(() => {
     loadData().then(setData).catch((e) => setError(e.message))
@@ -649,6 +676,18 @@ export default function App() {
       </footer>
 
       {playing && <Player channel={playing} onClose={closePlayer} />}
+
+      {confirmExit && (
+        <div className="player-overlay" onClick={() => setConfirmExit(false)}>
+          <div className="exit-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Exit Ultimate Channels?</h2>
+            <div className="exit-actions">
+              <button className="btn ghost" autoFocus onClick={() => setConfirmExit(false)}>Cancel</button>
+              <button className="btn" onClick={() => CapApp.exitApp()}>Exit</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

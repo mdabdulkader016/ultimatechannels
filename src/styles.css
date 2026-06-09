@@ -746,6 +746,18 @@ img.title-flag {
 .player-footer .btn { padding: 8px 16px; font-size: 13px; }
 .player-footer .btn.ghost { padding: 8px 16px; }
 
+/* ---------- Exit confirmation (Android Back on Home) ---------- */
+.exit-modal {
+  width: min(360px, 100%);
+  background: var(--surface); border: 1px solid var(--separator-2);
+  border-radius: var(--r-lg); box-shadow: var(--sh-lg);
+  padding: 26px; text-align: center;
+  animation: rise 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.exit-modal h2 { margin: 0 0 18px; font-family: var(--font-display); font-size: 19px; }
+.exit-actions { display: flex; gap: 12px; justify-content: center; }
+.exit-actions .btn { min-width: 110px; justify-content: center; }
+
 /* ---------- App VIP gate (APK only) ---------- */
 .app-gate {
   min-height: 100vh; display: grid; place-items: center; padding: 24px;
