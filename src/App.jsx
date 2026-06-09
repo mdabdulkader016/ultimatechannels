@@ -535,6 +535,15 @@ export default function App() {
         </div>
 
         <div className="nav-right">
+          {!IS_APP && (
+            <a className="btn-apk" href="/ultimatechannels.apk" download="UltimateChannels.apk">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12M7 11l5 5 5-5M5 21h14" />
+              </svg>
+              <span>Download APK</span>
+            </a>
+          )}
           {showQualityFilter && (
             <div className="filter only-desktop" ref={filterRef}>
               <button
