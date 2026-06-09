@@ -49,6 +49,10 @@ function MenuIcon() {
 // Country codes hidden from non-VIP users (and from search).
 const RESTRICTED_COUNTRIES = new Set(['BD'])
 
+// True when running inside the Android/TV APK (Capacitor tags the WebView UA).
+// In the app, the whole experience is gated behind a VIP code.
+const IS_APP = typeof navigator !== 'undefined' && /UltimateChannelsApp/.test(navigator.userAgent)
+
 // Categories surfaced in the filter menu (by friendly name → iptv-org id).
 const CATEGORY_FILTERS = [
   { id: 'sports', label: 'Sports' },
@@ -153,6 +157,24 @@ export default function App() {
     loadData().then(setData).catch((e) => setError(e.message))
   }, [])
 
+  // Re-validate a saved code on launch so revoked/expired codes lose access
+  // (enforces admin "Revoke" on the next app open / page load).
+  useEffect(() => {
+    const code = localStorage.getItem('vip_code')
+    if (localStorage.getItem('vip') === '1' && code) {
+      fetch(`/api/vip?code=${encodeURIComponent(code)}`)
+        .then((r) => r.json())
+        .then((j) => {
+          if (!j.ok) {
+            setVip(false)
+            localStorage.removeItem('vip')
+            localStorage.removeItem('vip_code')
+          }
+        })
+        .catch(() => {})
+    }
+  }, [])
+
   // Keep the active tab in sync with the URL so each nav item is a real link
   // (right-click → open in new tab) and browser back/forward work.
   useEffect(() => {
@@ -218,6 +240,7 @@ export default function App() {
       if (json.ok) {
         setVip(true)
         localStorage.setItem('vip', '1')
+        localStorage.setItem('vip_code', code)
         setVipOpen(false)
         setVipInput('')
         setVipError(false)
@@ -232,6 +255,7 @@ export default function App() {
   const signOutVip = () => {
     setVip(false)
     localStorage.removeItem('vip')
+    localStorage.removeItem('vip_code')
     setVipOpen(false)
   }
 
@@ -261,6 +285,19 @@ export default function App() {
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q),
     )
   }, [data, search, vip])
+
+  // In the APK, lock the entire app behind a VIP code.
+  if (IS_APP && !vip) {
+    return (
+      <AppGate
+        onUnlock={(code) => {
+          setVip(true)
+          localStorage.setItem('vip', '1')
+          localStorage.setItem('vip_code', code)
+        }}
+      />
+    )
+  }
 
   if (error) {
     return (
@@ -653,6 +690,53 @@ function Flag({ code, flag, className }) {
     )
   }
   return <span className={className}>{flag || '🏳️'}</span>
+}
+
+// Full-screen VIP gate shown in the APK before any content is accessible.
+function AppGate({ onUnlock }) {
+  const [code, setCode] = useState('')
+  const [err, setErr] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const submit = async (e) => {
+    e.preventDefault()
+    const c = code.trim()
+    if (!c) return
+    setBusy(true); setErr(false)
+    try {
+      const res = await fetch(`/api/vip?code=${encodeURIComponent(c)}`)
+      const json = await res.json()
+      if (json.ok) onUnlock(c)
+      else setErr(true)
+    } catch {
+      setErr(true)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div className="app-gate">
+      <div className="app-gate-card">
+        <img className="app-gate-logo" src="/Ulimate-Channels-Logo.png" alt="Ultimate Channels" />
+        <h1>Members only</h1>
+        <p className="muted">Enter your VIP code to unlock Ultimate Channels.</p>
+        <form onSubmit={submit}>
+          <input
+            className={`vip-input ${err ? 'err' : ''}`}
+            type="text"
+            placeholder="Enter VIP code"
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setErr(false) }}
+            autoFocus
+          />
+          {err && <span className="app-gate-err">Invalid or expired code</span>}
+          <button className="btn-play" type="submit" disabled={busy}>
+            {busy ? 'Checking…' : 'Unlock'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 function SectionHeader({ title, subtitle }) {

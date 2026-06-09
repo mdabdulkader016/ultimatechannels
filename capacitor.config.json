@@ -1,0 +1,14 @@
+{
+  "appId": "com.ultimatechannels.app",
+  "appName": "Ultimate Channels",
+  "webDir": "dist",
+  "appendUserAgent": "UltimateChannelsApp",
+  "server": {
+    "url": "https://www.ultimatechannels.xyz",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "appendUserAgent": "UltimateChannelsApp"
+  }
+}
