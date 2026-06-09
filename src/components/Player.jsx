@@ -238,11 +238,6 @@ export default function Player({ channel, onClose }) {
             )}
             <span style={{ marginLeft: 6 }}>{isFs ? 'Exit' : 'Fullscreen'}</span>
           </button>
-          {channel.website && (
-            <a className="btn ghost" href={channel.website} target="_blank" rel="noreferrer">
-              Channel site ↗
-            </a>
-          )}
         </div>
       </div>
     </div>
