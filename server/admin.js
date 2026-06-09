@@ -105,10 +105,23 @@ export async function adminHandler(req, res) {
       let code = genCode()
       // avoid the rare collision
       if (await getCode(code)) code = genCode()
-      await addCode(code, { label, createdAt: Date.now(), active: true })
+      await addCode(code, { label, createdAt: Date.now(), active: true, code })
       created.push(code)
     }
     return send(res, 200, { ok: true, created })
+  }
+
+  // Create a custom code chosen by the admin (their own word).
+  if (action === 'custom') {
+    if (!storeReady()) return send(res, 500, { error: 'Storage not configured (set Upstash env vars)' })
+    const code = (body.code || '').toString().trim()
+    if (!/^[A-Za-z0-9_-]{3,40}$/.test(code)) {
+      return send(res, 400, { error: 'Use 3–40 letters, digits, - or _ (no spaces)' })
+    }
+    if (await getCode(code)) return send(res, 409, { error: 'That code already exists' })
+    const label = (body.label || '').toString().slice(0, 80)
+    await addCode(code, { label, createdAt: Date.now(), active: true, code })
+    return send(res, 200, { ok: true, created: [code] })
   }
 
   if (action === 'revoke' || action === 'activate') {

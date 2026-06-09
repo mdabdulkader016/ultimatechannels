@@ -23,6 +23,7 @@ export default function Admin() {
   const [storeReady, setStoreReady] = useState(true)
   const [label, setLabel] = useState('')
   const [count, setCount] = useState(1)
+  const [custom, setCustom] = useState('')
   const [justCreated, setJustCreated] = useState([])
   const [err, setErr] = useState('')
 
@@ -69,6 +70,20 @@ export default function Admin() {
     if (!json.ok) return setErr(json.error || 'Failed to generate')
     setJustCreated(json.created || [])
     setLabel('')
+    refresh()
+  }
+
+  const createCustom = async (e) => {
+    e.preventDefault()
+    const code = custom.trim()
+    if (!code) return
+    setBusy(true); setErr(''); setJustCreated([])
+    const { status, json } = await api('custom', { token, code, label })
+    setBusy(false)
+    if (status === 401) return logout()
+    if (!json.ok) return setErr(json.error || 'Failed to create code')
+    setJustCreated(json.created || [])
+    setCustom(''); setLabel('')
     refresh()
   }
 
@@ -128,17 +143,28 @@ export default function Admin() {
       </section>
 
       <section className="admin-panel">
-        <h2>Generate VIP codes</h2>
-        <form className="admin-gen" onSubmit={generate}>
+        <h2>Create VIP codes</h2>
+        <input
+          className="admin-input" placeholder="Label (optional, e.g. 'June promo') — applies to whichever you create below"
+          value={label} onChange={(e) => setLabel(e.target.value)} style={{ width: '100%', marginBottom: '14px' }}
+        />
+
+        <div className="admin-subhead">Your own code</div>
+        <form className="admin-gen" onSubmit={createCustom}>
           <input
-            className="admin-input" placeholder="Label (optional, e.g. 'June promo')"
-            value={label} onChange={(e) => setLabel(e.target.value)}
+            className="admin-input" placeholder="Type your code, e.g. GOLDENVIP (letters, digits, - or _)"
+            value={custom} onChange={(e) => setCustom(e.target.value)}
           />
+          <button className="btn" type="submit" disabled={busy}>Add code</button>
+        </form>
+
+        <div className="admin-subhead" style={{ marginTop: '16px' }}>Or generate random codes</div>
+        <form className="admin-gen" onSubmit={generate}>
           <input
             className="admin-input narrow" type="number" min="1" max="100"
             value={count} onChange={(e) => setCount(e.target.value)}
           />
-          <button className="btn" type="submit" disabled={busy}>{busy ? 'Working…' : 'Generate'}</button>
+          <button className="btn ghost" type="submit" disabled={busy}>{busy ? 'Working…' : 'Generate random'}</button>
         </form>
         {err && <span className="admin-err">{err}</span>}
         {justCreated.length > 0 && (
@@ -163,8 +189,8 @@ export default function Admin() {
               {codes.map((c) => (
                 <tr key={c.code} className={c.active ? '' : 'revoked'}>
                   <td>
-                    <button className="link-btn" title="Copy" onClick={() => navigator.clipboard.writeText(c.code.toUpperCase())}>
-                      {c.code.toUpperCase()}
+                    <button className="link-btn" title="Copy" onClick={() => navigator.clipboard.writeText(c.code)}>
+                      {c.code}
                     </button>
                   </td>
                   <td>{c.label || '—'}</td>
