@@ -9,6 +9,10 @@ import './styles.css'
 inject()
 injectSpeedInsights()
 
+// Tag the document when running inside the APK (Capacitor WebView) so CSS can
+// adapt (e.g. hide the native video fullscreen button — we have our own).
+if (/UltimateChannelsApp/.test(navigator.userAgent)) document.documentElement.classList.add('is-app')
+
 // Hidden admin route — reachable only by typing /admin, never linked in the UI.
 const isAdmin = window.location.pathname.replace(/\/+$/, '') === '/admin'
 
