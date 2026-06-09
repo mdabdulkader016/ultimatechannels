@@ -672,10 +672,14 @@ img.title-flag {
   background: #181818;
   border: 1px solid var(--separator);
   border-radius: var(--r-lg);
-  overflow: hidden;
+  /* No overflow:hidden — a rounded clip around the <video> disables the GPU
+     video-overlay path and makes windowed playback lag. */
   box-shadow: var(--sh-lg);
   animation: rise 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
+.player-header { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.player-footer { border-radius: 0 0 var(--r-lg) var(--r-lg); }
+.player-modal.fs .player-footer { border-radius: 0; }
 @keyframes rise { from { transform: translateY(16px) scale(0.99); opacity: 0; } }
 
 .player-header {
