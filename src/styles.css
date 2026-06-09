@@ -40,6 +40,29 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 
+/* ---- Remote / D-pad focus highlights (TV + keyboard) ---- */
+.nav-link:focus-visible,
+.btn:focus-visible, .btn-apk:focus-visible, .btn-play:focus-visible,
+.seg-item:focus-visible, .chip:focus-visible, .country-card:focus-visible,
+.filter-btn:focus-visible, .vip-btn:focus-visible, .navmenu-btn:focus-visible,
+.search-wrap:focus-within, .player-close:focus-visible, .row-arrow:focus-visible,
+.link-btn:focus-visible, .back-link:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+/* Channel tiles: mirror the hover look when focused by the remote. */
+.channel-card:focus-visible { outline: none; }
+.channel-card:focus-visible .card-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px var(--accent), var(--sh-md);
+  z-index: 3;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(150deg, #ff2d2d 0%, #8a0c12 45%, #000000 100%) border-box;
+}
+.channel-card:focus-visible .card-overlay { opacity: 1; }
+
 /* Type system (loaded in index.html):
    Poppins for body/UI text, Clash Display for headings. */
 :root {

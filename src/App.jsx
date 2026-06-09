@@ -3,6 +3,7 @@ import { loadData } from './api.js'
 import ChannelGrid from './components/ChannelGrid.jsx'
 import Row from './components/Row.jsx'
 import Player from './components/Player.jsx'
+import { initTvNavigation } from './tvnav.js'
 
 const TABS = [
   { id: 'home', label: 'Home' },
@@ -156,6 +157,17 @@ export default function App() {
   useEffect(() => {
     loadData().then(setData).catch((e) => setError(e.message))
   }, [])
+
+  // Remote / D-pad spatial navigation (TV). Inert on phones.
+  useEffect(() => initTvNavigation(), [])
+
+  // Remote "Back" / Escape closes the player.
+  useEffect(() => {
+    if (!playing) return
+    const onKey = (e) => { if (e.key === 'Escape' || e.key === 'GoBack' || e.key === 'BrowserBack') setPlaying(null) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [playing])
 
   // Re-validate a saved code on launch so revoked/expired codes lose access
   // (enforces admin "Revoke" on the next app open / page load).
