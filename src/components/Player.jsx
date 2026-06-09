@@ -145,6 +145,10 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
     if (Hls.isSupported()) {
       const hls = new Hls({
         maxBufferLength: 30,
+        // Cap the rendition to the on-screen player size: a small windowed
+        // player decodes a lighter (lower-res) variant → smooth on weak
+        // devices/TVs; fullscreen gets the full-quality rendition.
+        capLevelToPlayerSize: true,
         // Faster, sharper start: assume a healthy connection and skip the
         // bandwidth "probe" so ABR begins on a good rendition instead of
         // ramping up from the lowest (blurry) one.
