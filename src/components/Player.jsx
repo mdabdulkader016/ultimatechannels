@@ -17,7 +17,7 @@ function proxiedUrl(stream) {
 // CDNs known to send CORS headers → play these DIRECTLY (fast, no proxy).
 // These cover the Bangladeshi + sports/FIFA feeds. Everything else (Indian and
 // other channels that usually lack CORS) starts via the proxy for reliability.
-const DIRECT_HOSTS = /(^|\.)(gpcdn\.net|aynaott\.com|sunplex\.live|ottplus\.bd)$/i
+const DIRECT_HOSTS = /(^|\.)(gpcdn\.net|aynaott\.com|sunplex\.live|ottplus\.bd|amagi\.tv|shahid\.net|mangomolo\.com|kwikmotion\.com)$/i
 
 // Decide whether a source should START on the proxy. http must (mixed-content);
 // known CORS hosts go direct; everything else proxies first. The player still
