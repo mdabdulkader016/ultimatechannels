@@ -34,6 +34,25 @@ export default function Player({ channel, onClose }) {
     setProxied(true)
   }, [channel?.id])
 
+  // When the video goes fullscreen, rotate the device to landscape (and back on
+  // exit). Works in the Android WebView / mobile browsers; ignored on desktop.
+  useEffect(() => {
+    const onFsChange = () => {
+      const fs = document.fullscreenElement || document.webkitFullscreenElement
+      try {
+        if (fs && screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {})
+        else if (!fs && screen.orientation?.unlock) screen.orientation.unlock()
+      } catch { /* orientation lock unsupported here */ }
+    }
+    document.addEventListener('fullscreenchange', onFsChange)
+    document.addEventListener('webkitfullscreenchange', onFsChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange)
+      document.removeEventListener('webkitfullscreenchange', onFsChange)
+      try { screen.orientation?.unlock?.() } catch { /* noop */ }
+    }
+  }, [])
+
   useEffect(() => {
     const video = videoRef.current
     if (!video || !current) return
