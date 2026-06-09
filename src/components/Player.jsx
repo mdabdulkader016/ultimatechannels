@@ -59,6 +59,8 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
   const [proxied, setProxied] = useState(true)
   const [status, setStatus] = useState('loading') // loading | playing | error
   const [isFs, setIsFs] = useState(false)
+  const [controlsOn, setControlsOn] = useState(true)
+  const hideTimer = useRef(null)
 
   const streams = channel?.streams || []
   const current = streams[streamIndex]
@@ -109,6 +111,22 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
 
   // Always release any orientation lock when the player closes.
   useEffect(() => () => { unlockOrient() }, [])
+
+  // Auto-hide the controls after 5s of no activity; any input brings them back.
+  useEffect(() => {
+    const show = () => {
+      setControlsOn(true)
+      clearTimeout(hideTimer.current)
+      hideTimer.current = setTimeout(() => setControlsOn(false), 5000)
+    }
+    show()
+    const events = ['mousemove', 'keydown', 'pointerdown', 'touchstart', 'click']
+    events.forEach((e) => document.addEventListener(e, show))
+    return () => {
+      clearTimeout(hideTimer.current)
+      events.forEach((e) => document.removeEventListener(e, show))
+    }
+  }, [])
 
   useEffect(() => {
     const video = videoRef.current
@@ -209,7 +227,7 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
 
   return (
     <div className="player-overlay" onClick={onClose}>
-      <div className={`player-modal${isFs ? ' fs' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`player-modal${isFs ? ' fs' : ''}${controlsOn ? '' : ' hide-controls'}`} onClick={(e) => e.stopPropagation()}>
         {isFs && (
           <button className="fs-exit" onClick={exitFs} aria-label="Exit fullscreen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"

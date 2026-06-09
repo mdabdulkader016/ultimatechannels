@@ -680,6 +680,15 @@ img.title-flag {
 .player-header { border-radius: var(--r-lg) var(--r-lg) 0 0; }
 .player-footer { border-radius: 0 0 var(--r-lg) var(--r-lg); }
 .player-modal.fs .player-footer { border-radius: 0; }
+
+/* Auto-hiding controls (fade out after inactivity; back on any input). */
+.player-header, .player-footer, .fs-exit { transition: opacity 0.3s ease; }
+.player-modal.hide-controls .player-header,
+.player-modal.hide-controls .player-footer,
+.player-modal.hide-controls .fs-exit {
+  opacity: 0; pointer-events: none;
+}
+.player-modal.fs.hide-controls { cursor: none; }
 @keyframes rise { from { transform: translateY(16px) scale(0.99); opacity: 0; } }
 
 .player-header {
