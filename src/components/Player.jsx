@@ -14,6 +14,13 @@ function proxiedUrl(stream) {
   return `/proxy?${params.toString()}`
 }
 
+// Try https streams DIRECTLY first (fast — most CDNs send CORS); only http
+// streams must start via the proxy (mixed-content blocks direct on an https
+// page). Either way the player falls back to the other transport on failure.
+function startProxied(stream) {
+  return !/^https:/i.test(stream?.url || '')
+}
+
 /**
  * Plays an HLS (.m3u8) stream. Uses native playback on Safari/iOS and hls.js
  * everywhere else.
@@ -58,7 +65,7 @@ export default function Player({ channel, onClose }) {
 
   useEffect(() => {
     setStreamIndex(0)
-    setProxied(true)
+    setProxied(startProxied(streams[0]))
   }, [channel?.id])
 
   // Rotate the device to landscape → show fullscreen; back to portrait → exit.
@@ -82,13 +89,14 @@ export default function Player({ channel, onClose }) {
     setStatus('loading')
     const url = proxied ? proxiedUrl(current) : current.url
 
-    // On a fatal failure: try the same source directly, then auto-advance to
-    // the next pooled source (proxy again), and only error once all are spent.
+    // On a fatal failure: try the OTHER transport once (direct↔proxy) for this
+    // source, then advance to the next pooled source, erroring only when spent.
     const onFail = () => {
-      if (proxied) {
-        setProxied(false)
+      if (!proxied && /^https:/i.test(current.url)) {
+        setProxied(true) // direct attempt failed → retry via proxy
       } else if (streamIndex < streams.length - 1) {
-        setProxied(true)
+        const next = streams[streamIndex + 1]
+        setProxied(startProxied(next))
         setStreamIndex((i) => i + 1)
       } else {
         setStatus('error')
