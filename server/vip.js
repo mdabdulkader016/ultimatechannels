@@ -19,7 +19,7 @@ const STATIC = new Set(
   [
     ...(process.env.VIP_CODES || '').split(','),
     // ---- Add static VIP codes here (one per line, quoted) ----
-    'Ultimatechodu',
+    // (master code 'Ultimatechodu' removed — use dashboard-generated codes)
   ]
     .map((c) => c.trim().toLowerCase())
     .filter(Boolean),
