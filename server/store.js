@@ -68,7 +68,7 @@ export async function deleteCode(code) {
   return n > 0
 }
 
-// Returns [{ code, label, createdAt, active, redeemed }] newest first.
+// Returns [{ code, label, createdAt, active, redeemed, ips }] newest first.
 export async function listCodes() {
   const flat = await cmd('HGETALL', CODES_HASH) // [field, value, field, value, ...]
   if (!Array.isArray(flat)) return []
@@ -78,8 +78,36 @@ export async function listCodes() {
     let meta = {}
     try { meta = JSON.parse(flat[i + 1]) || {} } catch { meta = {} }
     const redeemed = await getNum(`vip:rc:${code}`)
-    out.push({ code, redeemed, ...meta })
+    const ips = (await cmd('HLEN', `vip:ips:${code}`)) || 0
+    out.push({ code, redeemed, ips, ...meta })
   }
   out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+  return out
+}
+
+// Record that `ip` used `code` (dedup by IP; track hit count + first/last seen).
+export async function recordIp(code, ip, now) {
+  const key = `vip:ips:${code.trim().toLowerCase()}`
+  const field = ip || 'unknown'
+  let m = { count: 0, first: now, last: now }
+  const raw = await cmd('HGET', key, field)
+  if (raw) { try { m = JSON.parse(raw) } catch { /* keep default */ } }
+  m.count = (m.count || 0) + 1
+  m.last = now
+  if (!m.first) m.first = now
+  await cmd('HSET', key, field, JSON.stringify(m))
+}
+
+// Returns [{ ip, count, first, last }] for a code, most-recent first.
+export async function listIps(code) {
+  const flat = await cmd('HGETALL', `vip:ips:${code.trim().toLowerCase()}`)
+  if (!Array.isArray(flat)) return []
+  const out = []
+  for (let i = 0; i < flat.length; i += 2) {
+    let m = {}
+    try { m = JSON.parse(flat[i + 1]) || {} } catch { m = {} }
+    out.push({ ip: flat[i], count: m.count || 0, first: m.first || null, last: m.last || null })
+  }
+  out.sort((a, b) => (b.last || 0) - (a.last || 0))
   return out
 }

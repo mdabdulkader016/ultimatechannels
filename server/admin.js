@@ -6,7 +6,7 @@
 // Optional env var:  ADMIN_SECRET     (token signing key; defaults to the password)
 // VIP codes/stats live in Upstash (see server/store.js).
 import crypto from 'node:crypto'
-import { storeReady, addCode, getCode, setCode, deleteCode, listCodes, getNum } from './store.js'
+import { storeReady, addCode, getCode, setCode, deleteCode, listCodes, getNum, listIps } from './store.js'
 
 const PASSWORD = process.env.ADMIN_PASSWORD || ''
 const SECRET = process.env.ADMIN_SECRET || PASSWORD || 'insecure-dev-secret'
@@ -94,6 +94,10 @@ export async function adminHandler(req, res) {
 
   if (action === 'codes') {
     return send(res, 200, { codes: await listCodes() })
+  }
+
+  if (action === 'ips') {
+    return send(res, 200, { ips: await listIps(body.code || '') })
   }
 
   if (action === 'generate') {

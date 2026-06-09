@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 
 const TOKEN_KEY = 'admin_token'
 
@@ -85,6 +85,16 @@ export default function Admin() {
     setJustCreated(json.created || [])
     setCustom(''); setLabel('')
     refresh()
+  }
+
+  const [ipsFor, setIpsFor] = useState('')
+  const [ipsData, setIpsData] = useState({})
+  const viewIps = async (code) => {
+    if (ipsFor === code) { setIpsFor(''); return }
+    setIpsFor(code)
+    const { status, json } = await api('ips', { token, code })
+    if (status === 401) return logout()
+    setIpsData((d) => ({ ...d, [code]: json.ips || [] }))
   }
 
   const setActive = async (code, active) => {
@@ -183,30 +193,54 @@ export default function Admin() {
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>Code</th><th>Label</th><th>Created</th><th>Redeemed</th><th>Status</th><th></th></tr>
+              <tr><th>Code</th><th>Label</th><th>Created</th><th>Redeemed</th><th>IPs</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {codes.map((c) => (
-                <tr key={c.code} className={c.active ? '' : 'revoked'}>
-                  <td>
-                    <button className="link-btn" title="Copy" onClick={() => navigator.clipboard.writeText(c.code)}>
-                      {c.code}
-                    </button>
-                  </td>
-                  <td>{c.label || '—'}</td>
-                  <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</td>
-                  <td>{c.redeemed || 0}</td>
-                  <td>{c.active ? <span className="tag-on">Active</span> : <span className="tag-off">Revoked</span>}</td>
-                  <td className="admin-row-actions">
-                    {c.active
-                      ? <button className="link-btn warn" onClick={() => setActive(c.code, false)}>Revoke</button>
-                      : <button className="link-btn" onClick={() => setActive(c.code, true)}>Activate</button>}
-                    <button className="link-btn warn" onClick={() => del(c.code)}>Delete</button>
-                  </td>
-                </tr>
+                <Fragment key={c.code}>
+                  <tr className={c.active ? '' : 'revoked'}>
+                    <td>
+                      <button className="link-btn" title="Copy" onClick={() => navigator.clipboard.writeText(c.code)}>
+                        {c.code}
+                      </button>
+                    </td>
+                    <td>{c.label || '—'}</td>
+                    <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</td>
+                    <td>{c.redeemed || 0}</td>
+                    <td>
+                      {c.ips > 0
+                        ? <button className="link-btn" onClick={() => viewIps(c.code)}>{c.ips} {c.ips === 1 ? 'IP' : 'IPs'} {ipsFor === c.code ? '▴' : '▾'}</button>
+                        : <span className="muted">0</span>}
+                    </td>
+                    <td>{c.active ? <span className="tag-on">Active</span> : <span className="tag-off">Revoked</span>}</td>
+                    <td className="admin-row-actions">
+                      {c.active
+                        ? <button className="link-btn warn" onClick={() => setActive(c.code, false)}>Revoke</button>
+                        : <button className="link-btn" onClick={() => setActive(c.code, true)}>Activate</button>}
+                      <button className="link-btn warn" onClick={() => del(c.code)}>Delete</button>
+                    </td>
+                  </tr>
+                  {ipsFor === c.code && (
+                    <tr className="admin-ips-row">
+                      <td colSpan="7">
+                        <div className="admin-ips">
+                          {(ipsData[c.code] || []).length === 0
+                            ? <span className="muted">No IPs recorded yet.</span>
+                            : (ipsData[c.code] || []).map((r) => (
+                                <div className="admin-ip" key={r.ip}>
+                                  <code>{r.ip}</code>
+                                  <span className="muted">{r.count} use{r.count === 1 ? '' : 's'}</span>
+                                  <span className="muted">last {r.last ? new Date(r.last).toLocaleString() : '—'}</span>
+                                </div>
+                              ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
               {codes.length === 0 && (
-                <tr><td colSpan="6" className="muted" style={{ padding: '18px', textAlign: 'center' }}>No codes yet — generate some above.</td></tr>
+                <tr><td colSpan="7" className="muted" style={{ padding: '18px', textAlign: 'center' }}>No codes yet — create some above.</td></tr>
               )}
             </tbody>
           </table>

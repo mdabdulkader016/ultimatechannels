@@ -6,7 +6,14 @@
 //   1. A static code (VIP_CODES env var, comma-separated, or the CODES list), or
 //   2. An active code generated from the admin dashboard (stored in Upstash).
 // Matching is case-insensitive and trims surrounding whitespace.
-import { getCode, incr } from './store.js'
+import { getCode, incr, recordIp } from './store.js'
+
+// Best-effort client IP (Vercel sets x-forwarded-for; fall back to socket).
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || ''
+  if (xff) return String(xff).split(',')[0].trim()
+  return (req.socket && req.socket.remoteAddress) || 'unknown'
+}
 
 const STATIC = new Set(
   [
@@ -36,7 +43,11 @@ export async function vipHandler(req, res) {
   const ok = await isValidCode(code)
   if (ok) {
     incr('stat:redeem_ok')
-    if (!STATIC.has(code.toLowerCase())) incr(`vip:rc:${code.toLowerCase()}`)
+    const c = code.toLowerCase()
+    if (!STATIC.has(c)) {
+      incr(`vip:rc:${c}`)
+      recordIp(c, clientIp(req), Date.now()) // track which IPs use this code
+    }
   } else {
     incr('stat:redeem_fail')
   }

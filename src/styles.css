@@ -760,6 +760,10 @@ img.title-flag {
 .link-btn.warn { color: var(--accent); }
 .tag-on { color: var(--live); font-weight: 600; }
 .tag-off { color: var(--label-3); }
+.admin-ips-row td { background: rgba(0,0,0,0.3); }
+.admin-ips { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px; }
+.admin-ip { display: flex; gap: 16px; align-items: center; font-size: 12.5px; }
+.admin-ip code { color: var(--label); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 4px; min-width: 120px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
