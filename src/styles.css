@@ -689,6 +689,24 @@ img.title-flag {
   opacity: 0; pointer-events: none;
 }
 .player-modal.fs.hide-controls { cursor: none; }
+
+/* Quality (resolution) menu */
+.qmenu { position: relative; }
+.qmenu-panel {
+  position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 70;
+  display: flex; flex-direction: column; min-width: 120px;
+  max-height: 260px; overflow-y: auto;
+  background: #1b1b1b; border: 1px solid var(--separator);
+  border-radius: var(--r-md); box-shadow: var(--sh-md); padding: 6px;
+  animation: pop 0.14s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.qmenu-item {
+  padding: 9px 14px; border: none; background: none; cursor: pointer;
+  color: var(--label-2); font-size: 13.5px; font-family: inherit;
+  text-align: left; border-radius: var(--r-xs); white-space: nowrap;
+}
+.qmenu-item:hover, .qmenu-item:focus-visible { background: var(--hover); color: #fff; }
+.qmenu-item.active { color: var(--accent); font-weight: 600; }
 @keyframes rise { from { transform: translateY(16px) scale(0.99); opacity: 0; } }
 
 .player-header {

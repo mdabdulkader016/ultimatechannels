@@ -61,6 +61,15 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
   const [isFs, setIsFs] = useState(false)
   const [controlsOn, setControlsOn] = useState(true)
   const hideTimer = useRef(null)
+  const [levels, setLevels] = useState([]) // available quality renditions
+  const [selLevel, setSelLevel] = useState(-1) // -1 = Auto
+  const [qOpen, setQOpen] = useState(false)
+
+  const pickQuality = (i) => {
+    setSelLevel(i)
+    setQOpen(false)
+    if (hlsRef.current) hlsRef.current.currentLevel = i // -1 → Auto (ABR)
+  }
 
   const streams = channel?.streams || []
   const current = streams[streamIndex]
@@ -89,6 +98,9 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
   useEffect(() => {
     setStreamIndex(0)
     setProxied(startProxied(streams[0]))
+    setLevels([])
+    setSelLevel(-1)
+    setQOpen(false)
   }, [channel?.id])
 
   // Open straight into fullscreen on TVs / already-landscape screens (a TV is
@@ -194,6 +206,9 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setStatus('playing')
         video.play().catch(() => {})
+        // Expose selectable quality levels (YouTube-style menu).
+        setLevels((hls.levels || []).map((l, i) => ({ i, height: l.height || 0, bitrate: l.bitrate || 0 })))
+        setSelLevel(-1) // start on Auto
       })
       // hls.js can often recover from a fatal network/media error in place; give
       // it one chance before we abandon this attempt.
@@ -302,6 +317,23 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
             <button className="btn ghost" onClick={tryNextStream} disabled={streamIndex >= streams.length - 1}>
               Switch source
             </button>
+          )}
+          {levels.length > 1 && (
+            <div className="qmenu">
+              <button className="btn ghost" onClick={() => setQOpen((o) => !o)} aria-label="Quality">
+                {selLevel === -1 ? 'Auto' : `${levels.find((l) => l.i === selLevel)?.height}p`} ▾
+              </button>
+              {qOpen && (
+                <div className="qmenu-panel">
+                  <button className={`qmenu-item ${selLevel === -1 ? 'active' : ''}`} onClick={() => pickQuality(-1)}>Auto</button>
+                  {[...levels].sort((a, b) => b.height - a.height).map((l) => (
+                    <button key={l.i} className={`qmenu-item ${selLevel === l.i ? 'active' : ''}`} onClick={() => pickQuality(l.i)}>
+                      {l.height ? `${l.height}p` : `${Math.round(l.bitrate / 1000)}k`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <button className="btn ghost" onClick={toggleFullscreen} aria-label="Fullscreen"
             style={{ display: 'inline-flex', alignItems: 'center' }}>
