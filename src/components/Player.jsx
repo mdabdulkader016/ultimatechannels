@@ -89,6 +89,13 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
     setProxied(startProxied(streams[0]))
   }, [channel?.id])
 
+  // Open straight into fullscreen on TVs / already-landscape screens (a TV is
+  // always landscape, so the "orientationchange" listener below never fires —
+  // and the windowed modal overflows a TV's viewport). Runs once on open.
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(orientation: landscape)').matches) setIsFs(true)
+  }, [])
+
   // Rotate the device to landscape → show fullscreen; back to portrait → exit.
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
