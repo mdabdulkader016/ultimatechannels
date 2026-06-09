@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { proxyHandler } from './proxy.js'
 import { vipHandler } from './vip.js'
+import { adminHandler } from './admin.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const dist = join(__dirname, '..', 'dist')
@@ -17,6 +18,9 @@ app.use('/proxy', proxyHandler)
 
 // VIP code verification (same route as in dev).
 app.use('/api/vip', vipHandler)
+
+// Admin API (same route as in dev).
+app.use('/api/admin', adminHandler)
 
 // Static assets + SPA fallback.
 app.use(express.static(dist))

@@ -2,26 +2,45 @@
 // the client bundle. Wired into both dev (vite.config.js) and prod
 // (server/index.js), mirroring the stream proxy.
 //
-// Codes can be supplied two ways (both are accepted):
-//   1. The VIP_CODES environment variable, comma-separated.
-//   2. The CODES array below.
+// A code is valid if it is either:
+//   1. A static code (VIP_CODES env var, comma-separated, or the CODES list), or
+//   2. An active code generated from the admin dashboard (stored in Upstash).
 // Matching is case-insensitive and trims surrounding whitespace.
+import { getCode, incr } from './store.js'
 
-const CODES = new Set(
+const STATIC = new Set(
   [
     ...(process.env.VIP_CODES || '').split(','),
-    // ---- Add VIP codes here (one per line, quoted) ----
+    // ---- Add static VIP codes here (one per line, quoted) ----
     'Ultimatechodu',
   ]
     .map((c) => c.trim().toLowerCase())
     .filter(Boolean),
 )
 
+// Is this code currently valid? (static OR an active admin-generated code)
+export async function isValidCode(code) {
+  const c = (code || '').trim().toLowerCase()
+  if (!c) return false
+  if (STATIC.has(c)) return true
+  const meta = await getCode(c)
+  return Boolean(meta && meta.active)
+}
+
 // GET /api/vip?code=XXXX  ->  { ok: true | false }
-export function vipHandler(req, res) {
+export async function vipHandler(req, res) {
   const url = new URL(req.url, 'http://localhost')
-  const code = (url.searchParams.get('code') || '').trim().toLowerCase()
-  const ok = code.length > 0 && CODES.has(code)
+  const code = (url.searchParams.get('code') || '').trim()
+
+  incr('stat:checks') // fire-and-forget metrics
+  const ok = await isValidCode(code)
+  if (ok) {
+    incr('stat:redeem_ok')
+    if (!STATIC.has(code.toLowerCase())) incr(`vip:rc:${code.toLowerCase()}`)
+  } else {
+    incr('stat:redeem_fail')
+  }
+
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Cache-Control', 'no-store')
   res.statusCode = 200
