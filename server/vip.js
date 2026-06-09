@@ -34,27 +34,33 @@ export async function isValidCode(code) {
   return Boolean(meta && meta.active)
 }
 
-// GET /api/vip?code=XXXX  ->  { ok: true | false }
+// GET /api/vip?code=XXXX[&silent=1]  ->  { ok: true | false }
+// `silent=1` is used by the app's background re-validation on launch: it checks
+// whether the code is still valid (to enforce Revoke) WITHOUT counting a
+// redemption or recording an IP. Only a real, typed-in code counts.
 export async function vipHandler(req, res) {
   const url = new URL(req.url, 'http://localhost')
   const code = (url.searchParams.get('code') || '').trim()
+  const silent = url.searchParams.get('silent') === '1'
 
   const ok = await isValidCode(code)
   const c = code.toLowerCase()
   // IMPORTANT: await all writes — on serverless the function is frozen right
   // after the response is sent, so un-awaited writes to Upstash get dropped.
-  try {
-    await incr('stat:checks')
-    if (ok) {
-      await incr('stat:redeem_ok')
-      if (!STATIC.has(c)) {
-        await incr(`vip:rc:${c}`)
-        await recordIp(c, clientIp(req), Date.now()) // track which IPs use this code
+  if (!silent) {
+    try {
+      await incr('stat:checks')
+      if (ok) {
+        await incr('stat:redeem_ok')
+        if (!STATIC.has(c)) {
+          await incr(`vip:rc:${c}`) // "Redeemed" = times the code was typed in
+          await recordIp(c, clientIp(req), Date.now()) // track which IPs entered it
+        }
+      } else {
+        await incr('stat:redeem_fail')
       }
-    } else {
-      await incr('stat:redeem_fail')
-    }
-  } catch { /* metrics are best-effort; never block the response */ }
+    } catch { /* metrics are best-effort; never block the response */ }
+  }
 
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Cache-Control', 'no-store')

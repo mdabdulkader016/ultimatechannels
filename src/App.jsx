@@ -162,7 +162,8 @@ export default function App() {
   useEffect(() => {
     const code = localStorage.getItem('vip_code')
     if (localStorage.getItem('vip') === '1' && code) {
-      fetch(`/api/vip?code=${encodeURIComponent(code)}`)
+      // silent=1 → validate only (enforce Revoke); don't count a redemption.
+      fetch(`/api/vip?code=${encodeURIComponent(code)}&silent=1`)
         .then((r) => r.json())
         .then((j) => {
           if (!j.ok) {
