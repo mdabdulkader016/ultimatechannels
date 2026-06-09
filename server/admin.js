@@ -138,6 +138,14 @@ export async function adminHandler(req, res) {
     return send(res, 200, { ok: true })
   }
 
+  if (action === 'setlimit') {
+    const meta = await getCode(body.code || '')
+    if (!meta) return send(res, 404, { error: 'Code not found' })
+    meta.maxUses = Math.max(parseInt(body.maxUses, 10) || 0, 0) // 0 = unlimited
+    await setCode(body.code, meta)
+    return send(res, 200, { ok: true })
+  }
+
   if (action === 'delete') {
     await deleteCode(body.code || '')
     return send(res, 200, { ok: true })

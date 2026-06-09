@@ -102,6 +102,12 @@ export default function Admin() {
     await api(active ? 'activate' : 'revoke', { token, code })
     refresh()
   }
+  const editLimit = async (code, current) => {
+    const v = prompt(`Max uses for "${code}"  (0 or blank = unlimited):`, current || 0)
+    if (v === null) return // cancelled
+    await api('setlimit', { token, code, maxUses: v })
+    refresh()
+  }
   const del = async (code) => {
     if (!confirm(`Delete ${code}? This cannot be undone.`)) return
     await api('delete', { token, code })
@@ -215,7 +221,11 @@ export default function Admin() {
                     <td>{c.label || '—'}</td>
                     <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</td>
                     <td>{c.redeemed || 0}</td>
-                    <td>{c.maxUses > 0 ? c.maxUses : '∞'}</td>
+                    <td>
+                      <button className="link-btn" title="Set usage limit (0 = unlimited)" onClick={() => editLimit(c.code, c.maxUses || 0)}>
+                        {c.maxUses > 0 ? c.maxUses : '∞'} ✎
+                      </button>
+                    </td>
                     <td>
                       {c.ips > 0
                         ? <button className="link-btn" onClick={() => viewIps(c.code)}>{c.ips} {c.ips === 1 ? 'IP' : 'IPs'} {ipsFor === c.code ? '▴' : '▾'}</button>
