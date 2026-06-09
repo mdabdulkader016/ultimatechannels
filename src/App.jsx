@@ -153,6 +153,19 @@ export default function App() {
 
   const [menuOpen, setMenuOpen] = useState(false) // mobile 3-dot menu
   const menuRef = useRef(null)
+  const playingRef = useRef(false)
+  useEffect(() => { playingRef.current = !!playing }, [playing])
+
+  // Open the player and push a history entry, so the TV remote's hardware Back
+  // (and browser Back) closes the player instead of exiting the whole app.
+  const openPlayer = (ch) => {
+    if (!playingRef.current) window.history.pushState({ player: true }, '')
+    setPlaying(ch)
+  }
+  const closePlayer = () => {
+    if (window.history.state && window.history.state.player) window.history.back()
+    else setPlaying(null)
+  }
 
   useEffect(() => {
     loadData().then(setData).catch((e) => setError(e.message))
@@ -161,10 +174,10 @@ export default function App() {
   // Remote / D-pad spatial navigation (TV). Inert on phones.
   useEffect(() => initTvNavigation(), [])
 
-  // Remote "Back" / Escape closes the player.
+  // Desktop Escape closes the player (TV hardware Back is handled via history).
   useEffect(() => {
     if (!playing) return
-    const onKey = (e) => { if (e.key === 'Escape' || e.key === 'GoBack' || e.key === 'BrowserBack') setPlaying(null) }
+    const onKey = (e) => { if (e.key === 'Escape') closePlayer() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [playing])
@@ -192,6 +205,8 @@ export default function App() {
   // (right-click → open in new tab) and browser back/forward work.
   useEffect(() => {
     const onPop = () => {
+      // If the player is open, Back just closes it (don't change tab/exit).
+      if (playingRef.current) { setPlaying(null); return }
       const t = new URLSearchParams(window.location.search).get('tab')
       setTab(TABS.some((x) => x.id === t) ? t : 'home')
       setSelectedCountry(null)
@@ -364,7 +379,7 @@ export default function App() {
             title={<span className="cap">{title}</span>}
             subtitle={`${list.length} channel${list.length === 1 ? '' : 's'}`}
           />
-          <ChannelGrid channels={list.slice(0, limit)} onPlay={setPlaying} />
+          <ChannelGrid channels={list.slice(0, limit)} onPlay={openPlayer} />
           <LoadMore shown={Math.min(limit, list.length)} total={list.length} onMore={() => setLimit((l) => l + PAGE_SIZE)} />
         </div>
       )
@@ -383,10 +398,10 @@ export default function App() {
 
     return (
       <>
-        <Hero channel={featured} images={HERO_IMAGES} onPlay={setPlaying} />
+        <Hero channel={featured} images={HERO_IMAGES} onPlay={openPlayer} />
         <div className="rows">
           {catRows.map((r) => (
-            <Row key={r.key} title={r.title} channels={r.channels} onPlay={setPlaying} />
+            <Row key={r.key} title={r.title} channels={r.channels} onPlay={openPlayer} />
           ))}
           {countryRows.map((r) => (
             <Row
@@ -398,7 +413,7 @@ export default function App() {
                 </span>
               }
               channels={r.channels}
-              onPlay={setPlaying}
+              onPlay={openPlayer}
             />
           ))}
         </div>
@@ -431,7 +446,7 @@ export default function App() {
             }
             subtitle={`${list.length} channel${list.length === 1 ? '' : 's'}`}
           />
-          <ChannelGrid channels={list.slice(0, limit)} onPlay={setPlaying} />
+          <ChannelGrid channels={list.slice(0, limit)} onPlay={openPlayer} />
           <LoadMore shown={Math.min(limit, list.length)} total={list.length} onMore={() => setLimit((l) => l + PAGE_SIZE)} />
         </div>
       )
@@ -463,7 +478,7 @@ export default function App() {
           title="All Channels"
           subtitle={search ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `${data.totalChannels} channels — use search to narrow down`}
         />
-        <ChannelGrid channels={list.slice(0, limit)} onPlay={setPlaying} />
+        <ChannelGrid channels={list.slice(0, limit)} onPlay={openPlayer} />
         <LoadMore shown={Math.min(limit, list.length)} total={list.length} onMore={() => setLimit((l) => l + PAGE_SIZE)} />
       </div>
     )
@@ -633,7 +648,7 @@ export default function App() {
         </span>
       </footer>
 
-      {playing && <Player channel={playing} onClose={() => setPlaying(null)} />}
+      {playing && <Player channel={playing} onClose={closePlayer} />}
     </div>
   )
 }
