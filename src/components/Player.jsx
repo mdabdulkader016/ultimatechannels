@@ -14,11 +14,21 @@ function proxiedUrl(stream) {
   return `/proxy?${params.toString()}`
 }
 
-// Try https streams DIRECTLY first (fast — most CDNs send CORS); only http
-// streams must start via the proxy (mixed-content blocks direct on an https
-// page). Either way the player falls back to the other transport on failure.
+// CDNs known to send CORS headers → play these DIRECTLY (fast, no proxy).
+// These cover the Bangladeshi + sports/FIFA feeds. Everything else (Indian and
+// other channels that usually lack CORS) starts via the proxy for reliability.
+const DIRECT_HOSTS = /(^|\.)(gpcdn\.net|aynaott\.com|sunplex\.live|ottplus\.bd)$/i
+
+// Decide whether a source should START on the proxy. http must (mixed-content);
+// known CORS hosts go direct; everything else proxies first. The player still
+// falls back to the other transport on failure either way.
 function startProxied(stream) {
-  return !/^https:/i.test(stream?.url || '')
+  const url = stream?.url || ''
+  if (!/^https:/i.test(url)) return true // http → must use proxy
+  try {
+    if (DIRECT_HOSTS.test(new URL(url).hostname)) return false // CORS-friendly → direct
+  } catch { /* fall through */ }
+  return true // default: proxy-first (more reliable for no-CORS streams)
 }
 
 /**
