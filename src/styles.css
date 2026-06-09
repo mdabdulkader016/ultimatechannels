@@ -661,8 +661,7 @@ img.title-flag {
 /* ---------- Player modal ---------- */
 .player-overlay {
   position: fixed; inset: 0; z-index: 100;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.92);
   display: grid; place-items: center;
   padding: 24px;
   animation: fade 0.2s ease;
@@ -710,8 +709,14 @@ img.title-flag {
   width: 100vw; height: 100vh; max-width: none;
   border-radius: 0; background: #000;
 }
-.player-modal.fs .player-header,
-.player-modal.fs .player-footer { display: none; }
+.player-modal.fs .player-header { display: none; }
+/* Keep controls reachable (esp. by TV remote) — float them over the video. */
+.player-modal.fs .player-footer {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  border-top: none;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  padding: 28px 18px 16px;
+}
 .player-modal.fs .player-video-wrap {
   position: absolute; inset: 0; aspect-ratio: auto; height: 100%; width: 100%;
 }

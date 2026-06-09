@@ -21,7 +21,7 @@ export default function Row({ title, channels, onPlay }) {
         </button>
         <div className="row-track" ref={trackRef}>
           {channels.map((ch) => (
-            <ChannelCard key={ch.id} channel={ch} onPlay={onPlay} />
+            <ChannelCard key={ch.id} channel={ch} onPlay={(c) => onPlay(c, channels)} />
           ))}
         </div>
         <button className="row-arrow right" onClick={() => scroll(1)} aria-label="Scroll right">

@@ -51,7 +51,7 @@ function startProxied(stream) {
  * Referer/User-Agent), then directly as a fallback if the proxy is unavailable.
  * Only after both fail do we fall through to the channel's next source.
  */
-export default function Player({ channel, onClose }) {
+export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasNext }) {
   const videoRef = useRef(null)
   const wrapRef = useRef(null)
   const hlsRef = useRef(null)
@@ -255,6 +255,20 @@ export default function Player({ channel, onClose }) {
             Source {streamIndex + 1} of {streams.length}
             {proxied ? ' · via proxy' : ' · direct'}
           </span>
+          {onPrev && (
+            <button className="btn ghost" onClick={onPrev} disabled={!hasPrev} aria-label="Previous channel"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6v12l-9-6z" /></svg>
+              Prev
+            </button>
+          )}
+          {onNext && (
+            <button className="btn ghost" onClick={onNext} disabled={!hasNext} aria-label="Next channel"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l9 6-9 6z" /></svg>
+              Next
+            </button>
+          )}
           {streams.length > 1 && (
             <button className="btn ghost" onClick={tryNextStream} disabled={streamIndex >= streams.length - 1}>
               Switch source

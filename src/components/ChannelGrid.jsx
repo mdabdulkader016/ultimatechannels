@@ -8,7 +8,7 @@ export default function ChannelGrid({ channels, onPlay }) {
   return (
     <div className="channel-grid">
       {channels.map((ch) => (
-        <ChannelCard key={ch.id} channel={ch} onPlay={onPlay} />
+        <ChannelCard key={ch.id} channel={ch} onPlay={(c) => onPlay(c, channels)} />
       ))}
     </div>
   )

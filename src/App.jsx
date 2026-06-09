@@ -143,9 +143,12 @@ export default function App() {
   const [category, setCategory] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
   const [playing, setPlaying] = useState(null)
+  const [playlist, setPlaylist] = useState([])
   const [confirmExit, setConfirmExit] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const filterRef = useRef(null)
+  const playlistRef = useRef([])
+  useEffect(() => { playlistRef.current = playlist }, [playlist])
 
   const [vip, setVip] = useState(() => localStorage.getItem('vip') === '1')
   const [vipOpen, setVipOpen] = useState(false)
@@ -157,24 +160,34 @@ export default function App() {
   const menuRef = useRef(null)
 
   // Refs mirror state so the (once-registered) native Back listener isn't stale.
-  const playingRef = useRef(false)
+  const playingRef = useRef(null)
   const tabRef = useRef(tab)
   const selCountryRef = useRef(null)
   const confirmRef = useRef(false)
-  useEffect(() => { playingRef.current = !!playing }, [playing])
+  useEffect(() => { playingRef.current = playing }, [playing])
   useEffect(() => { tabRef.current = tab }, [tab])
   useEffect(() => { selCountryRef.current = selectedCountry }, [selectedCountry])
   useEffect(() => { confirmRef.current = confirmExit }, [confirmExit])
 
   // On the web only, push a history entry so browser Back closes the player.
   // In the APK the native Back button is handled by the listener below.
-  const openPlayer = (ch) => {
+  const openPlayer = (ch, list) => {
     if (!IS_APP && !playingRef.current) window.history.pushState({ player: true }, '')
+    setPlaylist(Array.isArray(list) && list.length ? list : [ch])
     setPlaying(ch)
   }
   const closePlayer = () => {
     if (!IS_APP && window.history.state && window.history.state.player) window.history.back()
     else setPlaying(null)
+  }
+  // Jump to the previous/next channel within the list the player was opened from.
+  const switchChannel = (dir) => {
+    const list = playlistRef.current
+    const cur = playingRef.current
+    if (!cur || !list.length) return
+    const i = list.findIndex((c) => c.id === cur.id)
+    const j = i + dir
+    if (i >= 0 && j >= 0 && j < list.length) setPlaying(list[j])
   }
 
   // Android (TV/phone) hardware Back: step back toward Home, then confirm exit.
@@ -675,7 +688,19 @@ export default function App() {
         </span>
       </footer>
 
-      {playing && <Player channel={playing} onClose={closePlayer} />}
+      {playing && (() => {
+        const pIdx = playlist.findIndex((c) => c.id === playing.id)
+        return (
+          <Player
+            channel={playing}
+            onClose={closePlayer}
+            onPrev={() => switchChannel(-1)}
+            onNext={() => switchChannel(1)}
+            hasPrev={pIdx > 0}
+            hasNext={pIdx >= 0 && pIdx < playlist.length - 1}
+          />
+        )
+      })()}
 
       {confirmExit && (
         <div className="player-overlay" onClick={() => setConfirmExit(false)}>
