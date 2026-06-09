@@ -21,28 +21,49 @@ function proxiedUrl(stream) {
  */
 export default function Player({ channel, onClose }) {
   const videoRef = useRef(null)
+  const wrapRef = useRef(null)
   const hlsRef = useRef(null)
   const [streamIndex, setStreamIndex] = useState(0)
   const [proxied, setProxied] = useState(true)
   const [status, setStatus] = useState('loading') // loading | playing | error
+  const [isFs, setIsFs] = useState(false)
 
   const streams = channel?.streams || []
   const current = streams[streamIndex]
+
+  const enterFullscreen = (lockLandscape) => {
+    const el = wrapRef.current
+    const req = el && (el.requestFullscreen || el.webkitRequestFullscreen)
+    if (req) {
+      const p = req.call(el)
+      if (lockLandscape && p && p.then) {
+        p.then(() => { try { screen.orientation?.lock?.('landscape')?.catch(() => {}) } catch { /* noop */ } }).catch(() => {})
+      }
+    } else if (videoRef.current?.webkitEnterFullscreen) {
+      videoRef.current.webkitEnterFullscreen() // iOS Safari
+    }
+  }
+  const exitFullscreen = () => {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)
+    }
+  }
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen()
+    else enterFullscreen(true) // manual press → also lock to landscape
+  }
 
   useEffect(() => {
     setStreamIndex(0)
     setProxied(true)
   }, [channel?.id])
 
-  // When the video goes fullscreen, rotate the device to landscape (and back on
-  // exit). Works in the Android WebView / mobile browsers; ignored on desktop.
+  // Track fullscreen state; release the orientation lock when leaving fullscreen.
   useEffect(() => {
     const onFsChange = () => {
-      const fs = document.fullscreenElement || document.webkitFullscreenElement
-      try {
-        if (fs && screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {})
-        else if (!fs && screen.orientation?.unlock) screen.orientation.unlock()
-      } catch { /* orientation lock unsupported here */ }
+      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement)
+      setIsFs(fs)
+      if (!fs) { try { screen.orientation?.unlock?.() } catch { /* noop */ } }
     }
     document.addEventListener('fullscreenchange', onFsChange)
     document.addEventListener('webkitfullscreenchange', onFsChange)
@@ -51,6 +72,18 @@ export default function Player({ channel, onClose }) {
       document.removeEventListener('webkitfullscreenchange', onFsChange)
       try { screen.orientation?.unlock?.() } catch { /* noop */ }
     }
+  }, [])
+
+  // Rotate the device to landscape → auto-enter fullscreen; back to portrait → exit.
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: landscape)')
+    const onChange = (e) => {
+      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement)
+      if (e.matches && !fs) enterFullscreen(false) // sensor-driven; don't lock
+      else if (!e.matches && fs) exitFullscreen()
+    }
+    mq.addEventListener?.('change', onChange)
+    return () => mq.removeEventListener?.('change', onChange)
   }, [])
 
   useEffect(() => {
@@ -163,7 +196,7 @@ export default function Player({ channel, onClose }) {
           </button>
         </div>
 
-        <div className="player-video-wrap">
+        <div className="player-video-wrap" ref={wrapRef}>
           <video ref={videoRef} controls autoPlay playsInline className="player-video" />
           {status === 'loading' && (
             <div className="player-status">
@@ -197,6 +230,19 @@ export default function Player({ channel, onClose }) {
               Switch source
             </button>
           )}
+          <button className="btn ghost" onClick={toggleFullscreen} aria-label="Fullscreen"
+            style={{ display: 'inline-flex', alignItems: 'center' }}>
+            {isFs ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            )}
+            <span style={{ marginLeft: 6 }}>{isFs ? 'Exit' : 'Fullscreen'}</span>
+          </button>
           {channel.website && (
             <a className="btn ghost" href={channel.website} target="_blank" rel="noreferrer">
               Channel site ↗
