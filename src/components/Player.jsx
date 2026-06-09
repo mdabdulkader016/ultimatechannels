@@ -7,11 +7,22 @@ const IN_APP = typeof navigator !== 'undefined' && /UltimateChannelsApp/.test(na
 
 // Route a stream through the local proxy, carrying any header hints the source
 // provided (iptv-org streams sometimes specify a referrer / user_agent).
-function proxiedUrl(stream) {
+function proxiedUrl(stream, base = '/proxy') {
   const params = new URLSearchParams({ url: stream.url })
   if (stream.referrer) params.set('referer', stream.referrer)
   if (stream.user_agent) params.set('ua', stream.user_agent)
-  return `/proxy?${params.toString()}`
+  return `${base}?${params.toString()}`
+}
+
+// EU/European channels proxy via the Frankfurt edge (/proxy-eu); everything
+// else uses the default Mumbai edge (/proxy).
+const EU_COUNTRIES = new Set([
+  'AL', 'AT', 'BE', 'BA', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE',
+  'GR', 'HU', 'IS', 'IE', 'IT', 'XK', 'LV', 'LT', 'LU', 'MT', 'MD', 'ME', 'NL',
+  'MK', 'NO', 'PL', 'PT', 'RO', 'RS', 'SK', 'SI', 'ES', 'SE', 'CH', 'UA', 'GB',
+])
+function proxyBaseFor(channel) {
+  return EU_COUNTRIES.has(channel?.country) ? '/proxy-eu' : '/proxy'
 }
 
 // CDNs known to send CORS headers → play these DIRECTLY (fast, no proxy).
@@ -97,7 +108,7 @@ export default function Player({ channel, onClose }) {
     if (!video || !current) return
 
     setStatus('loading')
-    const url = proxied ? proxiedUrl(current) : current.url
+    const url = proxied ? proxiedUrl(current, proxyBaseFor(channel)) : current.url
 
     // On a fatal failure: try the OTHER transport once (direct↔proxy) for this
     // source, then advance to the next pooled source, erroring only when spent.

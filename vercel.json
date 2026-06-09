@@ -3,6 +3,7 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/proxy", "destination": "/api/proxy" },
+    { "source": "/proxy-eu", "destination": "/api/proxy-eu" },
     { "source": "/admin", "destination": "/index.html" }
   ]
 }
