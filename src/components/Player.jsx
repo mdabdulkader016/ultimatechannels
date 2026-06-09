@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
+import { ScreenOrientation } from '@capacitor/screen-orientation'
+
+// Running inside the APK (Capacitor WebView), tagged via user-agent.
+const IN_APP = typeof navigator !== 'undefined' && /UltimateChannelsApp/.test(navigator.userAgent)
 
 // Route a stream through the local proxy, carrying any header hints the source
 // provided (iptv-org streams sometimes specify a referrer / user_agent).
@@ -31,60 +35,45 @@ export default function Player({ channel, onClose }) {
   const streams = channel?.streams || []
   const current = streams[streamIndex]
 
-  const enterFullscreen = (lockLandscape) => {
+  // Fullscreen is a CSS overlay (works in the WebView, which lacks the HTML5
+  // Fullscreen API) plus a native landscape lock via the Capacitor plugin.
+  const lockLandscape = () => { try { ScreenOrientation.lock({ orientation: 'landscape' }).catch(() => {}) } catch { /* noop */ } }
+  const unlockOrient = () => { try { ScreenOrientation.unlock().catch(() => {}) } catch { /* noop */ } }
+
+  const enterFs = async (lock = true) => {
+    setIsFs(true)
+    // In a real browser, also use the native Fullscreen API (hides chrome).
     const el = wrapRef.current
-    const req = el && (el.requestFullscreen || el.webkitRequestFullscreen)
-    if (req) {
-      const p = req.call(el)
-      if (lockLandscape && p && p.then) {
-        p.then(() => { try { screen.orientation?.lock?.('landscape')?.catch(() => {}) } catch { /* noop */ } }).catch(() => {})
-      }
-    } else if (videoRef.current?.webkitEnterFullscreen) {
-      videoRef.current.webkitEnterFullscreen() // iOS Safari
+    if (!IN_APP && el?.requestFullscreen) { try { await el.requestFullscreen() } catch { /* noop */ } }
+    if (lock) lockLandscape()
+  }
+  const exitFs = () => {
+    setIsFs(false)
+    unlockOrient()
+    if (!IN_APP && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      try { (document.exitFullscreen || document.webkitExitFullscreen).call(document) } catch { /* noop */ }
     }
   }
-  const exitFullscreen = () => {
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)
-    }
-  }
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen()
-    else enterFullscreen(true) // manual press → also lock to landscape
-  }
+  const toggleFullscreen = () => { isFs ? exitFs() : enterFs(true) }
 
   useEffect(() => {
     setStreamIndex(0)
     setProxied(true)
   }, [channel?.id])
 
-  // Track fullscreen state; release the orientation lock when leaving fullscreen.
-  useEffect(() => {
-    const onFsChange = () => {
-      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement)
-      setIsFs(fs)
-      if (!fs) { try { screen.orientation?.unlock?.() } catch { /* noop */ } }
-    }
-    document.addEventListener('fullscreenchange', onFsChange)
-    document.addEventListener('webkitfullscreenchange', onFsChange)
-    return () => {
-      document.removeEventListener('fullscreenchange', onFsChange)
-      document.removeEventListener('webkitfullscreenchange', onFsChange)
-      try { screen.orientation?.unlock?.() } catch { /* noop */ }
-    }
-  }, [])
-
-  // Rotate the device to landscape → auto-enter fullscreen; back to portrait → exit.
+  // Rotate the device to landscape → show fullscreen; back to portrait → exit.
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
     const onChange = (e) => {
-      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement)
-      if (e.matches && !fs) enterFullscreen(false) // sensor-driven; don't lock
-      else if (!e.matches && fs) exitFullscreen()
+      if (e.matches) setIsFs(true)
+      else { setIsFs(false); unlockOrient() }
     }
     mq.addEventListener?.('change', onChange)
     return () => mq.removeEventListener?.('change', onChange)
   }, [])
+
+  // Always release any orientation lock when the player closes.
+  useEffect(() => () => { unlockOrient() }, [])
 
   useEffect(() => {
     const video = videoRef.current
@@ -174,7 +163,13 @@ export default function Player({ channel, onClose }) {
 
   return (
     <div className="player-overlay" onClick={onClose}>
-      <div className="player-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`player-modal${isFs ? ' fs' : ''}`} onClick={(e) => e.stopPropagation()}>
+        {isFs && (
+          <button className="fs-exit" onClick={exitFs} aria-label="Exit fullscreen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        )}
         <div className="player-header">
           <div className="player-title">
             {channel.logo && (
