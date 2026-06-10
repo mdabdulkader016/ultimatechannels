@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { proxyHandler } from './proxy.js'
 import { vipHandler } from './vip.js'
+import { pinsHandler } from './pins.js'
 import { adminHandler } from './admin.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -18,6 +19,9 @@ app.use('/proxy', proxyHandler)
 
 // VIP code verification (same route as in dev).
 app.use('/api/vip', vipHandler)
+
+// Per-VIP-code pin sync (same route as in dev).
+app.use('/api/pins', pinsHandler)
 
 // Admin API (same route as in dev).
 app.use('/api/admin', adminHandler)

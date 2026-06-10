@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { proxyHandler } from './server/proxy.js'
 import { vipHandler } from './server/vip.js'
+import { pinsHandler } from './server/pins.js'
 import { adminHandler } from './server/admin.js'
 
 // Serve the /proxy stream proxy and /api/vip check during development so they
@@ -13,6 +14,7 @@ function hlsProxyPlugin() {
     configureServer(server) {
       server.middlewares.use('/proxy', proxyHandler)
       server.middlewares.use('/api/vip', vipHandler)
+      server.middlewares.use('/api/pins', pinsHandler)
       server.middlewares.use('/api/admin', adminHandler)
     },
   }

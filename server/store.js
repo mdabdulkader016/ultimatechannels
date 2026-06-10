@@ -98,6 +98,25 @@ export async function recordIp(code, ip, now) {
   await cmd('HSET', key, field, JSON.stringify(m))
 }
 
+// ---- Pinned ("favorite") channels per VIP code ----
+// Stored as a JSON id-array at vip:pins:<code> so the same code shows the same
+// pins on every device. Capped to keep one code from storing an unbounded list.
+const MAX_PINS = 500
+
+export async function getPins(code) {
+  const raw = await cmd('GET', `vip:pins:${code.trim().toLowerCase()}`)
+  if (!raw) return []
+  try { const a = JSON.parse(raw); return Array.isArray(a) ? a : [] } catch { return [] }
+}
+
+export async function setPins(code, ids) {
+  const arr = (Array.isArray(ids) ? ids : [])
+    .filter((x) => typeof x === 'string' && x)
+    .slice(0, MAX_PINS)
+  const ok = await cmd('SET', `vip:pins:${code.trim().toLowerCase()}`, JSON.stringify(arr))
+  return ok !== null
+}
+
 // Returns [{ ip, count, first, last }] for a code, most-recent first.
 export async function listIps(code) {
   const flat = await cmd('HGETALL', `vip:ips:${code.trim().toLowerCase()}`)

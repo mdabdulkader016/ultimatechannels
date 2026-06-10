@@ -168,14 +168,12 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false) // mobile 3-dot menu
   const menuRef = useRef(null)
 
-  // Pinned ("favorite") channels — a Set of channel ids, persisted to
-  // localStorage so they survive reloads / app restarts.
+  // Pinned ("favorite") channels — a Set of channel ids. Persisted to
+  // localStorage (offline / non-VIP) and, for VIP users, synced to the server
+  // keyed by the VIP code so the same code shows the same pins on every device.
   const [pinned, setPinned] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('pinned_channels') || '[]')) } catch { return new Set() }
   })
-  useEffect(() => {
-    try { localStorage.setItem('pinned_channels', JSON.stringify([...pinned])) } catch { /* quota / private mode */ }
-  }, [pinned])
   const togglePin = useCallback((id) => {
     setPinned((prev) => {
       const next = new Set(prev)
@@ -185,6 +183,59 @@ export default function App() {
     })
   }, [])
   const pinValue = useMemo(() => ({ pinned, togglePin }), [pinned, togglePin])
+
+  // `synced` flips true once the server's pins are loaded for the active code;
+  // `remote` is true only when the store is actually configured (else we stay
+  // local-only and never touch the server).
+  const pinnedRef = useRef(pinned)
+  const pinsSyncedRef = useRef(false)
+  const pinsRemoteRef = useRef(false)
+  const pinsSaveTimer = useRef(null)
+  useEffect(() => { pinnedRef.current = pinned }, [pinned])
+
+  const savePinsToServer = (ids) => {
+    const code = localStorage.getItem('vip_code')
+    if (!code) return
+    fetch(`/api/pins?code=${encodeURIComponent(code)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pins: ids }),
+    }).catch(() => {})
+  }
+
+  // On VIP login / launch with a code, pull that code's pins. Server wins if it
+  // has any; otherwise seed it from local pins so an existing pinner doesn't
+  // lose them on first sync.
+  useEffect(() => {
+    pinsSyncedRef.current = false
+    pinsRemoteRef.current = false
+    const code = localStorage.getItem('vip_code')
+    if (!vip || !code) return
+    let cancelled = false
+    fetch(`/api/pins?code=${encodeURIComponent(code)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled || !j || !j.stored) return // store off → stay local-only
+        pinsRemoteRef.current = true
+        const serverPins = Array.isArray(j.pins) ? j.pins : []
+        if (serverPins.length) setPinned(new Set(serverPins))
+        else if (pinnedRef.current.size) savePinsToServer([...pinnedRef.current]) // seed
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) pinsSyncedRef.current = true })
+    return () => { cancelled = true }
+  }, [vip])
+
+  // Persist on every change: always to localStorage; and, once synced, to the
+  // server for the active code (debounced so rapid toggles coalesce).
+  useEffect(() => {
+    try { localStorage.setItem('pinned_channels', JSON.stringify([...pinned])) } catch { /* quota / private mode */ }
+    if (!vip || !pinsSyncedRef.current || !pinsRemoteRef.current) return
+    clearTimeout(pinsSaveTimer.current)
+    const ids = [...pinned]
+    pinsSaveTimer.current = setTimeout(() => savePinsToServer(ids), 600)
+    return () => clearTimeout(pinsSaveTimer.current)
+  }, [pinned, vip])
 
   // Refs mirror state so the (once-registered) native Back listener isn't stale.
   const playingRef = useRef(null)
