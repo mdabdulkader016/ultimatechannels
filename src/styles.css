@@ -513,12 +513,36 @@ a:hover { text-decoration: underline; }
 }
 .channel-card:hover .card-overlay { opacity: 1; }
 .card-play {
-  position: absolute; top: 10px; right: 10px;
-  width: 32px; height: 32px; border-radius: 50%;
+  /* Centered on the tile so it doesn't collide with the top-right pin toggle. */
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 44px; height: 44px; border-radius: 50%;
   display: grid; place-items: center;
   background: rgba(255, 255, 255, 0.92); color: #000;
   border: 2px solid #fff;
 }
+
+/* Pin (favorite) toggle — top-right of each tile. Hidden until hover/focus on
+   pointer devices, but always visible when pinned, and always visible on touch
+   devices (no hover) so it stays tappable. */
+.card-pin {
+  position: absolute; top: 8px; right: 8px; z-index: 4;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff; cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.18s, background 0.18s, color 0.18s, transform 0.12s;
+}
+.channel-card:hover .card-pin,
+.channel-card:focus-visible .card-pin,
+.card-pin:focus-visible,
+.card-pin.on { opacity: 1; }
+.card-pin.on { background: var(--accent); border-color: transparent; }
+.card-pin:hover { transform: scale(1.08); }
+.card-pin:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+@media (hover: none) { .card-pin { opacity: 1; background: rgba(0, 0, 0, 0.4); } }
 .card-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .card-name {
   font-size: 13px; font-weight: 600;

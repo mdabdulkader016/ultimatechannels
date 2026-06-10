@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadData } from './api.js'
 import ChannelGrid from './components/ChannelGrid.jsx'
 import Row from './components/Row.jsx'
 import Player from './components/Player.jsx'
+import { PinContext } from './pins.js'
 import { initTvNavigation } from './tvnav.js'
 import { App as CapApp } from '@capacitor/app'
 
@@ -44,6 +45,14 @@ function MenuIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" aria-hidden="true">
       <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  )
+}
+
+function PinnedIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a4 4 0 0 1-2 3.5V14h5v7l1 1 1-1v-7h5v-1.5A4 4 0 0 1 16 9z" />
     </svg>
   )
 }
@@ -158,6 +167,24 @@ export default function App() {
 
   const [menuOpen, setMenuOpen] = useState(false) // mobile 3-dot menu
   const menuRef = useRef(null)
+
+  // Pinned ("favorite") channels — a Set of channel ids, persisted to
+  // localStorage so they survive reloads / app restarts.
+  const [pinned, setPinned] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('pinned_channels') || '[]')) } catch { return new Set() }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('pinned_channels', JSON.stringify([...pinned])) } catch { /* quota / private mode */ }
+  }, [pinned])
+  const togglePin = useCallback((id) => {
+    setPinned((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+  const pinValue = useMemo(() => ({ pinned, togglePin }), [pinned, togglePin])
 
   // Refs mirror state so the (once-registered) native Back listener isn't stale.
   const playingRef = useRef(null)
@@ -354,6 +381,23 @@ export default function App() {
     )
   }, [data, search, vip])
 
+  // Flat id → channel lookup, used to resolve pinned ids back to channels.
+  const channelById = useMemo(() => {
+    const m = new Map()
+    if (data) for (const list of Object.values(data.channelsByCountry)) for (const ch of list) m.set(ch.id, ch)
+    return m
+  }, [data])
+
+  // Pinned channels, most-recently-pinned first, hiding restricted ones for
+  // non-VIP users (and silently skipping ids that no longer exist in the feed).
+  const pinnedChannels = useMemo(() => {
+    return [...pinned]
+      .reverse()
+      .map((id) => channelById.get(id))
+      .filter(Boolean)
+      .filter((ch) => vip || !RESTRICTED_COUNTRIES.has(ch.country))
+  }, [pinned, channelById, vip])
+
   // In the APK, lock the entire app behind a VIP code.
   if (IS_APP && !vip) {
     return (
@@ -440,6 +484,14 @@ export default function App() {
       <>
         <Hero channel={featured} images={HERO_IMAGES} onPlay={openPlayer} />
         <div className="rows">
+          {pinnedChannels.length > 0 && (
+            <Row
+              key="pinned"
+              title={<span className="title-with-flag"><PinnedIcon /> Pinned</span>}
+              channels={pinnedChannels}
+              onPlay={openPlayer}
+            />
+          )}
           {catRows.map((r) => (
             <Row key={r.key} title={r.title} channels={r.channels} onPlay={openPlayer} />
           ))}
@@ -577,6 +629,7 @@ export default function App() {
   )
 
   return (
+    <PinContext.Provider value={pinValue}>
     <div className="app">
       <header className="navbar">
         <div className="nav-left">
@@ -714,6 +767,7 @@ export default function App() {
         </div>
       )}
     </div>
+    </PinContext.Provider>
   )
 }
 

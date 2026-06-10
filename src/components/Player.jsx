@@ -181,7 +181,20 @@ export default function Player({ channel, onClose, onPrev, onNext, hasPrev, hasN
     // proxy stream isn't dropped to the (usually doomed) direct attempt early.
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 30,
+        // ---- Fast channel start (RoarZone-style live tuning) ----
+        // Start playback ~3 segments back from the live edge so only a couple
+        // of segments must download before the first frame, instead of filling
+        // a deep buffer first. lowLatencyMode stays OFF — these public streams
+        // aren't LL-HLS, so it would only add partial-segment churn.
+        lowLatencyMode: false,
+        liveSyncDurationCount: 3,        // begin ~3 segments behind the live edge
+        maxLiveSyncPlaybackRate: 1.5,    // catch up to live by speeding up slightly, not a jarring seek
+        // Shallower forward buffer → reaches "enough to play" sooner and stays
+        // near the live edge. Kept well above RoarZone's aggressive 6s, though,
+        // because our sources are public/flaky and need cushion to ride out
+        // hiccups without stalling.
+        maxBufferLength: 12,
+        backBufferLength: 30,            // evict stale back-buffer (frees memory; we never seek back on live)
         // Cap the rendition to the on-screen player size: a small windowed
         // player decodes a lighter (lower-res) variant → smooth on weak
         // devices/TVs; fullscreen gets the full-quality rendition.
